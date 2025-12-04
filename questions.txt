@@ -1,0 +1,500 @@
+How often have you experienced fatigue recently?
+Have you changed your diet or medication timing?
+How frequently do you monitor blood glucose?
+Have you had dizziness or blurry vision?
+Has your physical activity level changed?
+Have you noticed increased thirst or urination?
+Have you experienced headaches related to blood pressure?
+Have you had difficulty sleeping recently?
+Have you missed any medication doses?
+Has your appetite changed?
+How frequently have you had wheezing episodes?
+Do symptoms worsen at particular times of day?
+Have you increased inhaler use recently?
+Has exercise tolerance changed?
+Have you encountered new environmental triggers?
+Have you experienced nighttime coughing?
+Do you track peak flow readings?
+Has chest discomfort occurred during rest?
+Any recent respiratory infections?
+Has your inhaler technique changed?
+How has knee pain changed recently?
+Do symptoms worsen after activity?
+Has swelling or warmth occurred?
+Has walking distance decreased?
+Have you used assistive devices?
+Have you followed physical therapy exercises?
+Does stiffness last more than 30 minutes in mornings?
+Do OTC medications provide relief?
+Does pain disrupt sleep?
+Has your weight changed?
+When did symptoms begin?
+Do symptoms worsen indoors or outdoors?
+Have you used nasal sprays?
+Do you experience sinus pressure?
+Has sleep been affected?
+Have bedding or filters been changed recently?
+Does medication reduce symptoms?
+Do symptoms interfere with work focus?
+Do you experience coughing?
+Any exposure to pets or new environments?
+Have you taken medication consistently?
+Any changes in bowel habits?
+Increased sensitivity to cold?
+How has energy level shifted?
+Changes in hair or skin texture?
+Recent diet modifications?
+Any muscle weakness?
+Any recent thyroid blood tests?
+Significant weight changes?
+Any difficulty concentrating?
+Has ankle swelling increased recently?
+Have you noted reduced urine output?
+Have you reduced salt intake?
+Any shortness of breath?
+Any recent changes in blood pressure readings?
+Any muscle cramps?
+Has fatigue worsened?
+Have you changed medications?
+Any nausea or appetite loss?
+Have you had recent lab tests?
+How many migraine episodes have you had recently?
+Any visual disturbances before headaches?
+Has stress increased?
+Have you changed sleep patterns?
+Do medications reduce symptoms effectively?
+Any sensitivity to light or sound?
+Any nausea associated?
+Have episodes lasted longer than usual?
+Have you missed work due to headaches?
+Any new triggers identified?
+When does the discomfort typically occur?
+Any burning sensation in the chest?
+Have you consumed spicy or acidic foods?
+Any nausea or vomiting?
+Any black or tarry stools?
+Have symptoms worsened?
+Any recent alcohol consumption changes?
+Do symptoms improve with medication?
+Any weight changes?
+Have you taken NSAIDs recently?
+Has coughing increased recently?
+Any sputum color changes?
+Has shortness of breath worsened?
+Any difficulty performing daily tasks?
+Have you used inhalers more often?
+Any fever or chills?
+Any new environmental exposures?
+Do symptoms worsen when lying down?
+Any chest tightness?
+Have you had recent infections?
+Have you had panic episodes recently?
+Any difficulty concentrating?
+Has sleep quality changed?
+Any recent stress triggers?
+Has appetite changed?
+Have you taken medication consistently?
+Any physical symptoms like tension or palpitations?
+Do symptoms interfere with daily activities?
+Any changes in work or home environment?
+Have symptoms been constant or episodic?
+How often do you check glucose levels?
+Any episodes of hypoglycemia?
+Have you changed meal timing?
+Any changes in physical activity?
+Any recent infections?
+Do carb counts remain consistent?
+Any nighttime sweats?
+Has insulin dosing changed?
+Any vision changes?
+Have you missed any doses?
+Have you noticed swelling in feet or legs?
+Any difficulty breathing when lying flat?
+Have you gained weight recently?
+Any episodes of chest discomfort?
+Any dizziness or faintness?
+Have you taken diuretics consistently?
+Any nighttime shortness of breath?
+Has walking speed decreased?
+Any new cough?
+Have salt intake habits changed?
+When did the rash start?
+Any new detergents or soaps used?
+Is itching worse at night?
+Any fluid leakage from the patch?
+Any swelling or redness?
+Have you applied moisturizer regularly?
+Has stress increased recently?
+Any other new skin patches?
+Any changes in diet?
+Does heat worsen symptoms?
+When did toe pain begin?
+Is the joint swollen or warm?
+Have you eaten high-purine foods?
+Any difficulty walking?
+Has pain intensity changed?
+Any fever or chills?
+Have symptoms occurred previously?
+Have you taken medication consistently?
+Any alcohol consumption recently?
+Does elevation relieve symptoms?
+Are cramps more frequent recently?
+Any dietary triggers identified?
+Any bloating or gas?
+Any irregular bowel habits?
+Has stress increased?
+Has water intake changed?
+Any nausea?
+Any sleep disturbances?
+Does pain ease after bowel movements?
+Have medications helped?
+When did back pain start?
+Does pain worsen with movement?
+Any recent falls?
+Any height loss noticed?
+Any radiating pain?
+Have you taken medication weekly?
+Any exercise routine?
+Any changes in calcium intake?
+Any numbness or tingling?
+Does rest improve pain?
+Has focus changed over time?
+Any recent schedule disruptions?
+Any difficulty finishing tasks?
+Any side effects from medication?
+Any sleep changes?
+Any increased stress?
+Has appetite changed?
+Do symptoms change between morning and afternoon?
+Any work performance concerns?
+Have medication timings shifted?
+How long does morning stiffness last?
+Any swelling in joints?
+Has pain increased?
+Any difficulty gripping objects?
+Any fatigue?
+Any recent infections?
+Have medications been taken as scheduled?
+Any new joint involvement?
+Any weight changes?
+Any side effects from treatment?
+Do you use CPAP nightly?
+Any mask discomfort?
+Any nighttime awakenings?
+Any morning headaches?
+Any weight changes?
+Snoring reported by partner?
+Any nasal congestion?
+Any changes in sleep schedule?
+Do you feel refreshed after waking?
+Any caffeine increase recently?
+How frequent are hot flashes?
+Have you noticed sleep disturbances?
+Any menstrual cycle changes?
+Any mood fluctuations?
+Any stress triggers?
+Any new supplements used?
+Any weight changes?
+Any changes in physical activity?
+Any concentration issues?
+Has hydration changed?
+When do symptoms occur most often?
+Any regurgitation?
+Any chest discomfort?
+Have you eaten late at night?
+Any specific food triggers?
+Any cough or hoarseness?
+Any difficulty swallowing?
+Any weight changes?
+Does medication relieve symptoms?
+Any alcohol or caffeine intake increases?
+When did blurry vision begin?
+Have you missed any eye drop doses?
+Any eye pain?
+Any halos around lights?
+Any headaches?
+Any reduced peripheral vision?
+Any dryness or irritation?
+Any recent changes in lighting needs?
+Any difficulty reading?
+Any dizziness?
+How long have cycles been irregular?
+Any pelvic discomfort?
+Any acne or hair growth changes?
+Any weight changes?
+Any changes in diet?
+Any mood changes?
+Have medications been consistent?
+Any changes in energy level?
+Any sleep disturbances?
+Any attempts at lifestyle modifications?
+When did tremors worsen?
+Any stiffness in limbs?
+Any balance issues?
+Any slowness in movement?
+Any medication timing inconsistencies?
+Any difficulty with fine motor tasks?
+Any changes in walking pattern?
+Any fatigue?
+Any sleep disturbances?
+Any mood symptoms?
+When does pain worsen most?
+Any radiating pain?
+Any numbness or tingling?
+Any recent heavy lifting?
+Does stretching improve symptoms?
+Any sleep disruption?
+Any change in work ergonomics?
+Any weight changes?
+Have medications helped?
+Any previous imaging?
+When did muscle soreness begin?
+Any weakness?
+Any recent exercise changes?
+Any nighttime cramps?
+Have you missed doses?
+Any dark urine?
+Any fatigue?
+Any new medications?
+Any weight changes?
+Any changes in diet?
+How long has pelvic pain lasted?
+Does pain interfere with daily function?
+Any nausea or fatigue?
+Any bleeding changes?
+Any bowel or bladder symptoms?
+Any pain during exercise?
+Any sleep disruption?
+Any stress triggers?
+Any medication use?
+Any prior imaging or procedures?
+When did fullness begin?
+Any pain under right ribs?
+Any nausea?
+Any yellowing of eyes?
+Any weight loss?
+Any fatigue?
+Any alcohol intake?
+Any appetite changes?
+Any medication adherence issues?
+Any recent lab results?
+Does pain worsen with walking?
+Any stiffness after rest?
+Any clicking or locking?
+Any swelling?
+Any difficulty with stairs?
+Any physical therapy done recently?
+Any recent falls?
+Any weight changes?
+Any sleep disturbance from pain?
+Any relief with medications?
+When do symptoms worsen?
+Any sinus pressure?
+Any cough?
+Any difficulty breathing?
+Any new exposures?
+Any recent outdoor activity?
+Any medication benefit noted?
+Any sleep disruption?
+Any new pets?
+Any eye irritation?
+When did symptoms begin?
+Any fever?
+Any back pain?
+Any blood in urine?
+Any urinary frequency?
+Any urinary urgency?
+Any hydration changes?
+Any recent sexual activity?
+Any previous infections?
+Any medication relief?
+When did chest pressure begin?
+Does it occur at rest?
+Any radiation to jaw or arm?
+Any shortness of breath?
+Any dizziness?
+Any nausea?
+Any medication changes?
+Any stress triggers?
+Any recent activity changes?
+Any swelling in legs?
+Which areas are most tender?
+Has fatigue increased?
+Any sleep issues?
+Any stress increases?
+Any cognitive issues?
+Any stiffness in mornings?
+Any new medications?
+Any weather-related symptom changes?
+Any weight changes?
+Any exercise changes?
+Have you taken supplements regularly?
+Any shortness of breath?
+Any dizziness?
+Any heavy menstrual bleeding?
+Any dietary changes?
+Any palpitations?
+Any brittle nails?
+Any cravings for non-food items?
+Any sleep disturbances?
+Any recent infections?
+When did hearing difficulty begin?
+Does it occur in quiet rooms?
+Any ringing in ears?
+Any ear pain?
+Any recent infections?
+Any dizziness?
+Any exposure to loud noise?
+Any hearing aid use?
+Any trouble with phone conversations?
+Any changes in balance?
+Does pain radiate to arms?
+Any numbness or tingling?
+Any headaches?
+Does stretching improve symptoms?
+Any weakness in limbs?
+Any ergonomic changes?
+Any sleep discomfort?
+Any activity limitations?
+Any medication relief?
+Any previous imaging?
+When did itching begin?
+Any cracking of skin?
+Any fluid discharge?
+Do symptoms worsen after sweating?
+Any sock or shoe changes?
+Any shared surfaces exposure?
+Any odor?
+Any previous occurrences?
+Any medication improvement?
+Any swelling?
+When do headaches occur?
+Any chest discomfort?
+Any dizziness?
+Any vision changes?
+Any stress increase?
+Any salt intake changes?
+Any missed doses?
+Any nighttime symptoms?
+Any swelling in legs?
+Any sleep changes?
+When did symptoms start?
+Any difficulty starting urination?
+Any urinary frequency?
+Any urgency?
+Any nighttime urination?
+Any blood in urine?
+Any discomfort?
+Any medication changes?
+Any hydration changes?
+Any back pain?
+What time did symptoms occur?
+Any sweating or dizziness?
+Any skipped meals?
+Any increased exercise?
+Any new medications?
+Any headaches?
+Any palpitations?
+Any confusion?
+Any pattern of symptoms?
+Any diet changes?
+When did spinning sensation begin?
+Any hearing changes?
+Any nausea?
+Any recent colds?
+Any falls?
+Any blood pressure drops?
+Any changes in hydration?
+Any headaches?
+Any medication changes?
+Any vision disturbances?
+Has itching increased?
+Any bleeding from scratching?
+Any new patches?
+Any stress increase?
+Any joint pain?
+Any scalp pain?
+Any change in shampoo?
+Any dryness worsening?
+Any medication adherence issues?
+Any previous flare patterns?
+When did fatigue worsen?
+Any joint pain?
+Any fever?
+Any hair thinning?
+Any mouth ulcers?
+Any sun sensitivity?
+Any swelling?
+Any medication consistency issues?
+Any new stressors?
+Any chest discomfort?
+When did cough start?
+Any wheezing?
+Any chest tightness?
+Any nighttime symptoms?
+Any inhaler use increase?
+Any sinus congestion?
+Any recent infections?
+Any exposure to smoke?
+Any exercise intolerance?
+Any hydration changes?
+How often does forgetfulness occur?
+Any difficulty with daily tasks?
+Any recent confusion episodes?
+Any medication changes?
+Any mood changes?
+Any sleep disturbances?
+Any difficulty with names?
+Any family history?
+Any changes in appetite?
+Any recent stressors?
+Does pain improve after eating?
+Any nausea?
+Any vomiting?
+Any black stools?
+Any recent alcohol use?
+Any NSAID use?
+Any weight changes?
+Any stress increases?
+Any medication changes?
+Any pain severity changes?
+When did discomfort begin?
+Any recent falls?
+Any swelling?
+Any movement limitation?
+Any difficulty gripping?
+Any medication adherence issues?
+Any exercise routine changes?
+Any supplements missed?
+Any dietary changes?
+Any worsening of pain?
+When do racing thoughts occur?
+Any trouble falling asleep?
+Any daytime fatigue?
+Any stress triggers?
+Any medication changes?
+Any caffeine changes?
+Any exercise changes?
+Any irritability?
+Any concentration issues?
+Any appetite changes?
+When did tingling begin?
+Any numbness?
+Any burning sensation?
+Any balance issues?
+Any weakness?
+Any diabetes diagnosis?
+Any medication changes?
+Any alcohol use changes?
+Any vitamin deficiencies?
+Any recent infections?
+When does the aura begin?
+Any nausea?
+Any light sensitivity?
+Any sound sensitivity?
+Any sleep changes?
+Any missed meals?
+Any dehydration?
+Any stress triggers?
+Any medication response changes?
+Any vision loss episodes?
