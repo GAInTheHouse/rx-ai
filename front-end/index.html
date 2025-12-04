@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Dr. Shreya</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-layout">
+        <header class="header">
+            Medical System
+        </header>
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="#">Dashboard</a></li>
+                    <li><a href="#">My Profile</a></li>
+                    <li><a href="#">Messages</a></li>
+                    <li><a href="#">Medical Records</a></li>
+                    <li><a href="#">Documents</a></li>
+                    <li class="active"><a href="index.html">Lab Results</a></li>
+                    <li><a href="#">Payments</a></li>
+                    <li><a href="#">Calendar</a></li>
+                    <li><a href="#">Resources</a></li>
+                    <li><a href="#">FAQ</a></li>
+                </ul>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <h1>Welcome Dr. Shreya,</h1>
+            <h4>You have the following appointments today:</h4>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>View Todos</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list-body">
+                </tbody>
+            </table>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
