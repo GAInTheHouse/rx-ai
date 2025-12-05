@@ -57,87 +57,62 @@ class QuestionnaireGenerationRequest(BaseModel):
     issues_detected: List[str] = []
     clinical_provider_note: str = ""
 
-# HTML UI Page (NEW)
+# HTML UI Page - Simple test interface
 @app.get("/", response_class=HTMLResponse)
 async def home_page(request: Request):
-    patients = [{"patient_id": p["patient_id"], "age": p["history"]["age"], "sex": p["history"]["sex"]} 
-                for p in ALL_PATIENT_DATA[:10]]  # Show first 10
+    patient_count = len(ALL_PATIENT_DATA)
     
-    html_content = f"""
+    html_content = """
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Rx-AI Questionnaire Generator</title>
+        <title>Rx-AI Questionnaire API</title>
         <style>
-            body {{ font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px; }}
-            .card {{ background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; }}
-            input[type="text"] {{ width: 300px; padding: 10px; font-size: 16px; }}
-            button {{ padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; }}
-            .loading {{ display: none; color: #007bff; }}
-            .questions {{ background: white; padding: 20px; border-radius: 10px; margin-top: 20px; }}
-            .question {{ margin: 15px 0; padding: 15px; background: #e9ecef; border-radius: 8px; }}
+            body { font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+            .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            h1 { color: #333; }
+            .status { padding: 15px; background: #e7f3ff; border-left: 4px solid #007bff; margin: 20px 0; }
+            .endpoint { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; }
+            code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
         </style>
     </head>
     <body>
-        <h1>🚀 Rx-AI Questionnaire Generator</h1>
-        
         <div class="card">
-            <h2>Enter Patient ID</h2>
-            <input type="text" id="patient_id" placeholder="e.g. P001, P002" value="P001">
-            <button onclick="generateQuestionnaire()">Generate Questionnaire</button>
-            <div class="loading" id="loading">🔄 Processing with AI... (10-15s)</div>
-        </div>
-        
-        <div id="result"></div>
-        
-        <div class="card">
-            <h3>Available Patients (first 10):</h3>
-            <ul>{''.join([f'<li>{p["patient_id"]} (Age {p["age"]}, {p["sex"]})</li>' for p in patients])}</ul>
-        </div>
-
-        <script>
-        async function generateQuestionnaire() {{
-            const patientId = document.getElementById('patient_id').value;
-            const loading = document.getElementById('loading');
-            const result = document.getElementById('result');
+            <h1>Rx-AI Questionnaire API</h1>
+            <div class="status">
+                <strong>Status:</strong> API is running ✓<br>
+                <strong>Patients loaded:</strong> """ + str(patient_count) + """
+            </div>
             
-            loading.style.display = 'block';
-            result.innerHTML = '';
+            <h2>Available Endpoints</h2>
             
-            try {{
-                const response = await fetch('/questionnaire', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ patient_id: patientId }})
-                }});
-                
-                const data = await response.json();
-                loading.style.display = 'none';
-                
-                if (response.ok) {{
-                    result.innerHTML = `
-                        <div class="card questions">
-                            <h2>✅ Questionnaire for ${data.patient_id}</h2>
-                            <p><strong>Age:</strong> ${data.patient_age} | <strong>Pronouns:</strong> ${data.pronouns}</p>
-                            <p><strong>Total Questions:</strong> ${data.total_questions}</p>
-                            ${data.questions.map(q => `
-                                <div class="question">
-                                    <h4>❓ ${q.question}</h4>
-                                    <p><strong>Type:</strong> ${q.type} | <strong>Source:</strong> ${q.source}</p>
-                                    <p><small>${q.rationale}</small></p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                }} else {{
-                    result.innerHTML = `<div class="card" style="color: red;">❌ Error: ${data.detail}</div>`;
-                }}
-            }} catch (error) {{
-                loading.style.display = 'none';
-                result.innerHTML = `<div class="card" style="color: red;">❌ Network error: ${error}</div>`;
-            }}
-        }}
-        </script>
+            <div class="endpoint">
+                <strong>GET /patients</strong><br>
+                List all patients in the system
+            </div>
+            
+            <div class="endpoint">
+                <strong>POST /generate-questionnaire</strong><br>
+                Generate dynamic questionnaire for a visit<br>
+                <small>Used by React frontend</small>
+            </div>
+            
+            <div class="endpoint">
+                <strong>POST /questionnaire</strong><br>
+                Generate questionnaire from stored patient data
+            </div>
+            
+            <h3>Quick Test</h3>
+            <p>Test the API using curl:</p>
+            <code style="display: block; padding: 10px; overflow-x: auto;">
+curl -X GET http://localhost:8000/patients
+            </code>
+            
+            <p style="margin-top: 30px;">
+                <strong>Documentation:</strong> See README_API.md for full details<br>
+                <strong>React Frontend:</strong> http://localhost:5173 (when running)
+            </p>
+        </div>
     </body>
     </html>
     """
