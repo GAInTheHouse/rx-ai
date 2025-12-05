@@ -254,6 +254,134 @@
   background-color: #0056b3;
 }
 
+/* Questionnaire Section */
+.questionnaire-section {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 20px;
+  border-radius: 8px;
+  border: 2px dashed #dee2e6;
+}
+
+.questionnaire-release {
+  text-align: center;
+}
+
+.questionnaire-description {
+  color: #6c757d;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.release-questionnaire-button {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.release-questionnaire-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+}
+
+.release-questionnaire-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.questionnaire-status {
+  padding: 16px;
+}
+
+.status-waiting,
+.status-completed {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.status-waiting {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+}
+
+.status-completed {
+  background: #d4edda;
+  border: 2px solid #28a745;
+}
+
+.status-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.status-indicator.pending {
+  background: #ffc107;
+  animation: pulse 2s infinite;
+}
+
+.status-indicator.completed {
+  background: #28a745;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  flex: 1;
+}
+
+.status-text strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+
+.status-text p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.responses-preview {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #c3e6cb;
+}
+
+.responses-preview h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #155724;
+}
+
+.response-count {
+  background: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #155724;
+  font-weight: 500;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .visit-form-overlay {
@@ -289,6 +417,16 @@
   .cancel-button,
   .save-button {
     width: 100%;
+  }
+
+  .release-questionnaire-button {
+    width: 100%;
+  }
+
+  .status-waiting,
+  .status-completed {
+    flex-direction: column;
+    gap: 12px;
   }
 }
 

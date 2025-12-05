@@ -22,16 +22,39 @@ npm run dev
 
 The app will automatically open at `http://localhost:3000`
 
-### 3. Start Building!
+### 3. Start Using the App!
 
-The app is now live! You can:
+#### Provider Interface (`http://localhost:3000/`)
 - Browse all patients
 - Search by patient ID, age, or sex
 - Click on patient cards to view full details
 - Select different visits to see visit-specific information
 - **Create new visits** with the "+ Create New Visit" button
 - Add/edit conditions, medications, allergies, issues, and notes
-- View conditions, medications, allergies, issues, and clinical notes
+- **Release questionnaires to patients** 🤖
+- View auto-populated questionnaire responses
+
+#### Patient Portal (`http://localhost:3000/patient-portal/P001`)
+- See available questionnaires in real-time
+- Complete interactive questionnaires
+- Submit responses instantly to provider
+
+### 4. Test the Questionnaire Workflow! 🎯
+
+This is the **main feature** of the project!
+
+1. **Provider:** Open `http://localhost:3000/patient/P001`
+2. Click **"+ Create New Visit"**
+3. Fill in some basic info (conditions, notes)
+4. Scroll to **"Patient Questionnaire"** section
+5. Click **"📋 Release Questionnaire to Patient"**
+6. **Patient:** Open `http://localhost:3000/patient-portal/P001` in a new tab
+7. Click **"Start Questionnaire →"**
+8. Fill out all questions
+9. Click **"Submit Questionnaire"**
+10. **Provider:** Watch responses auto-populate in your form! ✨
+
+See [QUESTIONNAIRE_WORKFLOW.md](./QUESTIONNAIRE_WORKFLOW.md) for complete details.
 
 ## 📁 Project Structure
 
@@ -55,13 +78,24 @@ react-frontend/
 
 ## 🎨 Features
 
+### Provider Features
 ✅ Patient list with beautiful card-based UI
 ✅ Patient detail page with comprehensive visit information
 ✅ Visit selector to browse patient history
 ✅ **Create new visits** with full editing capabilities
 ✅ Add/remove conditions, medications, allergies, and issues
 ✅ Write and edit clinical provider notes
-✅ Display of conditions, medications, allergies, and issues
+✅ **🤖 Release AI-generated questionnaires to patients**
+✅ **Real-time response collection and auto-population**
+
+### Patient Features
+✅ Standalone patient portal interface
+✅ Real-time questionnaire notifications
+✅ Interactive multi-type questionnaire forms
+✅ Progress tracking and validation
+✅ Instant submission to provider
+
+### Technical
 ✅ Real-time search functionality
 ✅ Responsive design (mobile-friendly)
 ✅ Modern sidebar navigation

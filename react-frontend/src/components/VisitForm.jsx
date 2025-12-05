@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { QuestionnaireManager, DynamicQuestionnaireGenerator } from '../utils/questionnaireManager'
 import './VisitForm.css'
 
 function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
@@ -8,7 +9,15 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
     medications: [],
     allergies: [],
     issues_detected: [],
-    clinical_provider_note: ''
+    clinical_provider_note: '',
+    questionnaire_responses: null
+  })
+
+  const [questionnaireStatus, setQuestionnaireStatus] = useState({
+    released: false,
+    questionnaireId: null,
+    isGenerating: false,
+    completed: false
   })
 
   // Temporary input values for adding items to lists
@@ -16,6 +25,80 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
   const [medicationInput, setMedicationInput] = useState('')
   const [allergyInput, setAllergyInput] = useState('')
   const [issueInput, setIssueInput] = useState('')
+
+  // Listen for questionnaire completion
+  useEffect(() => {
+    const handleQuestionnaireCompleted = (event) => {
+      const { questionnaireId, responses } = event.detail
+      
+      if (questionnaireId === questionnaireStatus.questionnaireId) {
+        // Auto-populate responses in form
+        setFormData(prev => ({
+          ...prev,
+          questionnaire_responses: responses
+        }))
+        
+        setQuestionnaireStatus(prev => ({
+          ...prev,
+          completed: true
+        }))
+
+        alert('✅ Patient has completed the questionnaire! Responses have been added to this visit.')
+      }
+    }
+
+    window.addEventListener('questionnaireCompleted', handleQuestionnaireCompleted)
+    
+    return () => {
+      window.removeEventListener('questionnaireCompleted', handleQuestionnaireCompleted)
+    }
+  }, [questionnaireStatus.questionnaireId])
+
+  const handleReleaseQuestionnaire = async () => {
+    setQuestionnaireStatus(prev => ({ ...prev, isGenerating: true }))
+
+    try {
+      // PLACEHOLDER: Call dynamic questionnaire generation workflow
+      const patientData = {
+        patientId,
+        conditions: formData.conditions,
+        medications: formData.medications,
+        allergies: formData.allergies
+      }
+
+      const visitContext = {
+        visitId: formData.visit_id,
+        issues: formData.issues_detected,
+        notes: formData.clinical_provider_note
+      }
+
+      // Generate questionnaire using AI/ML model (placeholder)
+      const generatedQuestionnaire = await DynamicQuestionnaireGenerator.generateQuestionnaire(
+        patientData,
+        visitContext
+      )
+
+      // Release questionnaire to patient
+      const questionnaireId = QuestionnaireManager.releaseQuestionnaire(
+        patientId,
+        formData.visit_id,
+        generatedQuestionnaire
+      )
+
+      setQuestionnaireStatus({
+        released: true,
+        questionnaireId,
+        isGenerating: false,
+        completed: false
+      })
+
+      alert('✅ Questionnaire has been released to the patient!')
+    } catch (error) {
+      console.error('Error releasing questionnaire:', error)
+      alert('❌ Failed to release questionnaire. Please try again.')
+      setQuestionnaireStatus(prev => ({ ...prev, isGenerating: false }))
+    }
+  }
 
   const addCondition = () => {
     if (conditionInput.trim()) {
@@ -259,6 +342,62 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
               className="form-textarea"
               rows={6}
             />
+          </div>
+
+          {/* Questionnaire Section */}
+          <div className="form-section full-width questionnaire-section">
+            <label className="section-label">
+              <span className="icon">📋</span>
+              Patient Questionnaire
+            </label>
+            
+            {!questionnaireStatus.released ? (
+              <div className="questionnaire-release">
+                <p className="questionnaire-description">
+                  Release a dynamically generated questionnaire to the patient to gather additional information about their symptoms and condition.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleReleaseQuestionnaire}
+                  disabled={questionnaireStatus.isGenerating}
+                  className="release-questionnaire-button"
+                >
+                  {questionnaireStatus.isGenerating ? (
+                    <>⏳ Generating Questionnaire...</>
+                  ) : (
+                    <>📋 Release Questionnaire to Patient</>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="questionnaire-status">
+                {!questionnaireStatus.completed ? (
+                  <div className="status-waiting">
+                    <div className="status-indicator pending"></div>
+                    <div className="status-text">
+                      <strong>Questionnaire Released</strong>
+                      <p>Waiting for patient to complete the questionnaire...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="status-completed">
+                    <div className="status-indicator completed"></div>
+                    <div className="status-text">
+                      <strong>✅ Questionnaire Completed!</strong>
+                      <p>Patient responses have been added to this visit and will be saved.</p>
+                    </div>
+                    {formData.questionnaire_responses && (
+                      <div className="responses-preview">
+                        <h4>Response Summary:</h4>
+                        <div className="response-count">
+                          {Object.keys(formData.questionnaire_responses).length} questions answered
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Form Actions */}

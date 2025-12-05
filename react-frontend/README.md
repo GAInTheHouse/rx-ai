@@ -4,6 +4,7 @@ A modern React-based medical system interface for managing patient data and appo
 
 ## Features
 
+### Provider Interface
 - 🏥 Patient list view with search functionality
 - 📊 Patient cards displaying key information
 - 👤 Patient detail view with full visit history
@@ -13,7 +14,21 @@ A modern React-based medical system interface for managing patient data and appo
 - 📝 Clinical provider notes display and editing
 - 🎨 Modern, responsive UI design
 - 🔍 Real-time patient search by ID, age, or sex
-- 📱 Mobile-friendly responsive layout
+
+### 🤖 Dynamic Questionnaire System (Principal Feature)
+- **AI-Powered Question Generation** - Contextual questionnaires based on patient data
+- **Real-Time Release** - Send questionnaires to patients instantly
+- **Live Response Collection** - Auto-populate responses in provider's form
+- **Multiple Question Types** - Text, scale, radio, checkbox, multiline
+- **Progress Tracking** - Visual feedback for both provider and patient
+- **Bi-Directional Communication** - Seamless provider ↔ patient workflow
+
+### Patient Portal
+- 📱 Standalone patient interface
+- 📋 Real-time questionnaire notifications
+- ✍️ Interactive form completion
+- ✅ Instant submission to provider
+- 🔔 Auto-refresh for new questionnaires
 
 ## Getting Started
 
@@ -43,6 +58,17 @@ npm run dev
 
 The app will open automatically at `http://localhost:3000`
 
+### Testing the Questionnaire Workflow
+
+1. **Provider**: Open `http://localhost:3000/patient/P001`
+2. Click "+ Create New Visit"
+3. Click "Release Questionnaire to Patient"
+4. **Patient**: Open `http://localhost:3000/patient-portal/P001` (in new tab)
+5. Complete and submit the questionnaire
+6. **Provider**: See responses auto-populate!
+
+See [QUESTIONNAIRE_WORKFLOW.md](./QUESTIONNAIRE_WORKFLOW.md) for detailed instructions.
+
 ### Build for Production
 
 ```bash
@@ -56,21 +82,30 @@ The built files will be in the `dist` directory.
 ```
 react-frontend/
 ├── public/
-│   └── data/              # Patient data files
+│   └── data/                      # Patient data files
 ├── src/
-│   ├── components/        # Reusable components
+│   ├── components/                # Reusable components
 │   │   ├── Header.jsx
 │   │   ├── Sidebar.jsx
 │   │   ├── Layout.jsx
-│   │   └── PatientCard.jsx
-│   ├── pages/            # Page components
-│   │   └── PatientList.jsx
-│   ├── App.jsx           # Main app component
-│   ├── App.css           # App styles
-│   └── main.jsx          # Entry point
+│   │   ├── PatientCard.jsx
+│   │   ├── VisitForm.jsx         # Visit creation form
+│   │   └── QuestionnaireForm.jsx # Patient questionnaire UI
+│   ├── pages/                     # Page components
+│   │   ├── PatientList.jsx       # Provider: Patient list
+│   │   ├── PatientDetail.jsx     # Provider: Patient detail
+│   │   └── PatientView.jsx       # Patient: Portal interface
+│   ├── utils/
+│   │   └── questionnaireManager.js # Questionnaire state management
+│   ├── App.jsx                    # Main app with routing
+│   └── main.jsx                   # Entry point
 ├── index.html
 ├── vite.config.js
-└── package.json
+├── package.json
+├── README.md
+├── QUICKSTART.md
+├── CREATE_VISIT_GUIDE.md
+└── QUESTIONNAIRE_WORKFLOW.md      # 🤖 AI workflow documentation
 ```
 
 ## Technology Stack
@@ -82,14 +117,27 @@ react-frontend/
 
 ## Next Steps
 
-- ✅ Patient detail view (COMPLETED)
-- ✅ Visit selector functionality (COMPLETED)
-- ✅ Create new visits (COMPLETED)
-- Edit existing visits
-- Delete visits
-- Add authentication
-- Connect to a backend API
-- Add questionnaire functionality
-- Export patient reports (PDF)
-- Add visit comparison feature
+### Completed Features ✅
+- ✅ Patient list and detail views
+- ✅ Visit selector functionality
+- ✅ Create new visits with editable fields
+- ✅ **Dynamic questionnaire generation workflow**
+- ✅ **Patient portal with real-time questionnaires**
+- ✅ **Auto-population of questionnaire responses**
+
+### AI Integration (Critical Next Step) 🤖
+- [ ] **Integrate ML model with DynamicQuestionnaireGenerator**
+  - Replace placeholder in `src/utils/questionnaireManager.js`
+  - Connect to your AI backend/API
+  - Generate contextual questions based on patient data
+
+### Additional Features
+- [ ] Edit existing visits
+- [ ] Delete visits
+- [ ] Authentication & authorization
+- [ ] Backend API integration (REST + WebSocket)
+- [ ] Export patient reports (PDF)
+- [ ] Visit comparison feature
+- [ ] Analytics dashboard
+- [ ] Multi-language support
 
