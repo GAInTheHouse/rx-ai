@@ -1,18 +1,18 @@
 # Rx-AI Questionnaire Generator API Requirements
 
-# Core Framework
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-pydantic==2.5.3
+# Core Framework - Let pip resolve compatible versions
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.11.9
 
-# AI/ML Framework - Using latest stable version
-crewai>=0.80.0
+# AI/ML Framework
+crewai>=1.0.0
 openai>=1.10.0
 
 # Utilities
-python-dotenv==1.0.0
-python-multipart==0.0.6
+python-dotenv>=1.0.0
+python-multipart>=0.0.6
 
 # CORS Support
-aiofiles==23.2.1
+aiofiles>=23.2.1
 

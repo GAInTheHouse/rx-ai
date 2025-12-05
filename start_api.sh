@@ -30,7 +30,7 @@ conda activate ${ENV_NAME}
 
 # Install/update dependencies
 echo "📥 Installing dependencies..."
-#pip install -r requirements.txt --quiet
+pip install -r requirements.txt
 
 # Start the API
 echo ""
