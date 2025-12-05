@@ -124,57 +124,78 @@ export const QuestionnaireManager = {
   }
 }
 
-// PLACEHOLDER: Dynamic Questionnaire Generation Workflow
-// This is where the AI-powered questionnaire generation will be integrated
+// Dynamic Questionnaire Generation using CrewAI Backend
 export const DynamicQuestionnaireGenerator = {
-  // This will eventually call your AI/ML model to generate contextual questions
+  // API endpoint configuration
+  API_BASE_URL: 'http://localhost:8000',
+
+  // Call the AI-powered questionnaire generation API
   generateQuestionnaire: async (patientData, visitContext) => {
-    console.log('🤖 PLACEHOLDER: Dynamic Questionnaire Generation Workflow')
+    console.log('🤖 Calling AI Questionnaire Generation API')
     console.log('Patient Data:', patientData)
     console.log('Visit Context:', visitContext)
-    console.log('⚡ This is where the AI model will generate personalized questions')
     
-    // TODO: Replace with actual AI model call
-    // Example: const response = await fetch('/api/generate-questionnaire', { ... })
-    
-    // For now, return sample questions
-    return {
-      questions: [
-        {
-          id: 'q1',
-          type: 'text',
-          question: 'How are you feeling today?',
-          required: true
+    try {
+      const response = await fetch(`${DynamicQuestionnaireGenerator.API_BASE_URL}/generate-questionnaire`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          id: 'q2',
-          type: 'scale',
-          question: 'On a scale of 1-10, how would you rate your pain level?',
-          required: true,
-          min: 1,
-          max: 10
-        },
-        {
-          id: 'q3',
-          type: 'multiline',
-          question: 'Please describe any symptoms you\'ve been experiencing since your last visit.',
-          required: true
-        },
-        {
-          id: 'q4',
-          type: 'checkbox',
-          question: 'Which of the following have you experienced? (Select all that apply)',
-          options: ['Fatigue', 'Headaches', 'Dizziness', 'Nausea', 'Other'],
-          required: false
-        },
-        {
-          id: 'q5',
-          type: 'radio',
-          question: 'Are you taking your medications as prescribed?',
-          options: ['Yes, always', 'Most of the time', 'Sometimes', 'Rarely', 'No'],
-          required: true
-        }
-      ]
+        body: JSON.stringify({
+          patient_id: patientData.patientId,
+          visit_id: visitContext.visitId,
+          conditions: patientData.conditions || [],
+          medications: patientData.medications || [],
+          allergies: patientData.allergies || [],
+          issues_detected: visitContext.issues || [],
+          clinical_provider_note: visitContext.notes || ''
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail || `API request failed with status ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log('✅ Questionnaire generated successfully:', data)
+      
+      // Ensure questions have proper structure
+      const questions = data.questions || []
+      
+      return {
+        questions: questions.map((q, index) => ({
+          id: q.id || `q${index + 1}`,
+          type: q.type || 'text',
+          question: q.question || '',
+          required: q.required !== false, // Default to true
+          source: q.source || '',
+          rationale: q.rationale || '',
+          options: q.options || [],
+          min: q.min,
+          max: q.max
+        }))
+      }
+    } catch (error) {
+      console.error('❌ Error calling questionnaire generation API:', error)
+      
+      // Check if API server is running
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        alert('⚠️ Cannot connect to AI server. Make sure the API is running on http://localhost:8000\n\nRun: python api.py')
+        throw new Error('API server is not running. Start the server with: python api.py')
+      }
+      
+      throw error
+    }
+  },
+
+  // Health check to verify API is available
+  checkAPIHealth: async () => {
+    try {
+      const response = await fetch(`${DynamicQuestionnaireGenerator.API_BASE_URL}/patients`)
+      return response.ok
+    } catch {
+      return false
     }
   }
 }
