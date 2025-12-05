@@ -1,0 +1,280 @@
+import { useState } from 'react'
+import './VisitForm.css'
+
+function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
+  const [formData, setFormData] = useState({
+    visit_id: `${patientId}_V${visitNumber}`,
+    conditions: [],
+    medications: [],
+    allergies: [],
+    issues_detected: [],
+    clinical_provider_note: ''
+  })
+
+  // Temporary input values for adding items to lists
+  const [conditionInput, setConditionInput] = useState('')
+  const [medicationInput, setMedicationInput] = useState('')
+  const [allergyInput, setAllergyInput] = useState('')
+  const [issueInput, setIssueInput] = useState('')
+
+  const addCondition = () => {
+    if (conditionInput.trim()) {
+      setFormData({
+        ...formData,
+        conditions: [...formData.conditions, conditionInput.trim()]
+      })
+      setConditionInput('')
+    }
+  }
+
+  const removeCondition = (index) => {
+    setFormData({
+      ...formData,
+      conditions: formData.conditions.filter((_, i) => i !== index)
+    })
+  }
+
+  const addMedication = () => {
+    if (medicationInput.trim()) {
+      setFormData({
+        ...formData,
+        medications: [...formData.medications, medicationInput.trim()]
+      })
+      setMedicationInput('')
+    }
+  }
+
+  const removeMedication = (index) => {
+    setFormData({
+      ...formData,
+      medications: formData.medications.filter((_, i) => i !== index)
+    })
+  }
+
+  const addAllergy = () => {
+    if (allergyInput.trim()) {
+      setFormData({
+        ...formData,
+        allergies: [...formData.allergies, allergyInput.trim()]
+      })
+      setAllergyInput('')
+    }
+  }
+
+  const removeAllergy = (index) => {
+    setFormData({
+      ...formData,
+      allergies: formData.allergies.filter((_, i) => i !== index)
+    })
+  }
+
+  const addIssue = () => {
+    if (issueInput.trim()) {
+      setFormData({
+        ...formData,
+        issues_detected: [...formData.issues_detected, issueInput.trim()]
+      })
+      setIssueInput('')
+    }
+  }
+
+  const removeIssue = (index) => {
+    setFormData({
+      ...formData,
+      issues_detected: formData.issues_detected.filter((_, i) => i !== index)
+    })
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSave(formData)
+  }
+
+  const handleKeyPress = (e, addFunction) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      addFunction()
+    }
+  }
+
+  return (
+    <div className="visit-form-overlay">
+      <div className="visit-form-container">
+        <div className="visit-form-header">
+          <h2>Create New Visit</h2>
+          <p className="visit-id-display">Visit ID: {formData.visit_id}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="visit-form">
+          {/* Conditions Section */}
+          <div className="form-section">
+            <label className="section-label">
+              <span className="icon">🏥</span>
+              Conditions
+            </label>
+            <div className="input-with-button">
+              <input
+                type="text"
+                value={conditionInput}
+                onChange={(e) => setConditionInput(e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, addCondition)}
+                placeholder="Enter a condition and press Add or Enter"
+                className="form-input"
+              />
+              <button type="button" onClick={addCondition} className="add-button">
+                + Add
+              </button>
+            </div>
+            <div className="items-list">
+              {formData.conditions.map((condition, index) => (
+                <div key={index} className="item-tag condition-item">
+                  <span>{condition}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeCondition(index)}
+                    className="remove-button"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Medications Section */}
+          <div className="form-section">
+            <label className="section-label">
+              <span className="icon">💊</span>
+              Medications
+            </label>
+            <div className="input-with-button">
+              <input
+                type="text"
+                value={medicationInput}
+                onChange={(e) => setMedicationInput(e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, addMedication)}
+                placeholder="Enter medication (e.g., Metformin 1000mg BID)"
+                className="form-input"
+              />
+              <button type="button" onClick={addMedication} className="add-button">
+                + Add
+              </button>
+            </div>
+            <div className="items-list">
+              {formData.medications.map((med, index) => (
+                <div key={index} className="item-tag medication-item">
+                  <span>{med}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeMedication(index)}
+                    className="remove-button"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Allergies Section */}
+          <div className="form-section">
+            <label className="section-label">
+              <span className="icon">⚠️</span>
+              Allergies
+            </label>
+            <div className="input-with-button">
+              <input
+                type="text"
+                value={allergyInput}
+                onChange={(e) => setAllergyInput(e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, addAllergy)}
+                placeholder="Enter an allergy"
+                className="form-input"
+              />
+              <button type="button" onClick={addAllergy} className="add-button">
+                + Add
+              </button>
+            </div>
+            <div className="items-list">
+              {formData.allergies.map((allergy, index) => (
+                <div key={index} className="item-tag allergy-item">
+                  <span>{allergy}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAllergy(index)}
+                    className="remove-button"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Issues Detected Section */}
+          <div className="form-section">
+            <label className="section-label">
+              <span className="icon">🔍</span>
+              Issues Detected
+            </label>
+            <div className="input-with-button">
+              <input
+                type="text"
+                value={issueInput}
+                onChange={(e) => setIssueInput(e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, addIssue)}
+                placeholder="Enter an issue"
+                className="form-input"
+              />
+              <button type="button" onClick={addIssue} className="add-button">
+                + Add
+              </button>
+            </div>
+            <div className="items-list">
+              {formData.issues_detected.map((issue, index) => (
+                <div key={index} className="item-tag issue-item">
+                  <span>{issue}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeIssue(index)}
+                    className="remove-button"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Clinical Notes Section */}
+          <div className="form-section full-width">
+            <label className="section-label">
+              <span className="icon">📝</span>
+              Clinical Provider Notes
+            </label>
+            <textarea
+              value={formData.clinical_provider_note}
+              onChange={(e) => setFormData({ ...formData, clinical_provider_note: e.target.value })}
+              placeholder="Enter detailed clinical notes about this visit..."
+              className="form-textarea"
+              rows={6}
+            />
+          </div>
+
+          {/* Form Actions */}
+          <div className="form-actions">
+            <button type="button" onClick={onCancel} className="cancel-button">
+              Cancel
+            </button>
+            <button type="submit" className="save-button">
+              Save Visit
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+export default VisitForm
+

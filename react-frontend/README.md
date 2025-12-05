@@ -8,8 +8,9 @@ A modern React-based medical system interface for managing patient data and appo
 - 📊 Patient cards displaying key information
 - 👤 Patient detail view with full visit history
 - 🔄 Visit selector to browse between different patient visits
+- ✨ **Create new visits** with editable fields for all information
 - 💊 Comprehensive visit details (conditions, medications, allergies, issues)
-- 📝 Clinical provider notes display
+- 📝 Clinical provider notes display and editing
 - 🎨 Modern, responsive UI design
 - 🔍 Real-time patient search by ID, age, or sex
 - 📱 Mobile-friendly responsive layout
@@ -83,10 +84,12 @@ react-frontend/
 
 - ✅ Patient detail view (COMPLETED)
 - ✅ Visit selector functionality (COMPLETED)
-- Implement patient data editing
+- ✅ Create new visits (COMPLETED)
+- Edit existing visits
+- Delete visits
 - Add authentication
 - Connect to a backend API
 - Add questionnaire functionality
-- Export patient reports
+- Export patient reports (PDF)
 - Add visit comparison feature
 

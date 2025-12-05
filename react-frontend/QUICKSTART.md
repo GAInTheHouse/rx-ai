@@ -29,6 +29,8 @@ The app is now live! You can:
 - Search by patient ID, age, or sex
 - Click on patient cards to view full details
 - Select different visits to see visit-specific information
+- **Create new visits** with the "+ Create New Visit" button
+- Add/edit conditions, medications, allergies, issues, and notes
 - View conditions, medications, allergies, issues, and clinical notes
 
 ## 📁 Project Structure
@@ -56,8 +58,10 @@ react-frontend/
 ✅ Patient list with beautiful card-based UI
 ✅ Patient detail page with comprehensive visit information
 ✅ Visit selector to browse patient history
+✅ **Create new visits** with full editing capabilities
+✅ Add/remove conditions, medications, allergies, and issues
+✅ Write and edit clinical provider notes
 ✅ Display of conditions, medications, allergies, and issues
-✅ Clinical provider notes view
 ✅ Real-time search functionality
 ✅ Responsive design (mobile-friendly)
 ✅ Modern sidebar navigation
@@ -70,14 +74,16 @@ Here are some features you might want to add:
 
 1. ✅ **Patient Detail View** - COMPLETED! Click on any patient to see full history
 2. ✅ **Visit Selection** - COMPLETED! Browse through patient visits
-3. **Edit Patient Data** - Add forms to update patient information
-4. **Questionnaire Integration** - Add the questionnaire functionality
-5. **Authentication** - Add login for doctors
-6. **Backend API** - Connect to a real backend instead of JSON files
-7. **Charts & Analytics** - Visualize patient data trends
-8. **Appointment Management** - Schedule and track appointments
-9. **Visit Comparison** - Compare data across multiple visits
-10. **Export Reports** - Generate PDF reports for patients
+3. ✅ **Create New Visits** - COMPLETED! Doctors can create visits with editable fields
+4. **Edit Existing Visits** - Modify previously created visits
+5. **Delete Visits** - Remove visits with confirmation
+6. **Questionnaire Integration** - Add the questionnaire functionality
+7. **Authentication** - Add login for doctors
+8. **Backend API** - Connect to a real backend instead of JSON files
+9. **Charts & Analytics** - Visualize patient data trends
+10. **Appointment Management** - Schedule and track appointments
+11. **Visit Comparison** - Compare data across multiple visits side-by-side
+12. **Export Reports** - Generate PDF reports for patients
 
 ## 🛠️ Available Scripts
 

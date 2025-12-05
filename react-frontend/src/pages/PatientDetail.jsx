@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import VisitForm from '../components/VisitForm'
 import './PatientDetail.css'
 
 function PatientDetail() {
@@ -8,6 +9,7 @@ function PatientDetail() {
   const [patient, setPatient] = useState(null)
   const [selectedVisitIndex, setSelectedVisitIndex] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [showVisitForm, setShowVisitForm] = useState(false)
 
   useEffect(() => {
     // Load patient data
@@ -26,6 +28,26 @@ function PatientDetail() {
         setLoading(false)
       })
   }, [patientId])
+
+  const handleSaveNewVisit = (newVisitData) => {
+    // Add the new visit to the patient's visits array
+    const updatedPatient = {
+      ...patient,
+      visits: [...patient.visits, newVisitData]
+    }
+    
+    setPatient(updatedPatient)
+    setSelectedVisitIndex(updatedPatient.visits.length - 1) // Switch to the new visit
+    setShowVisitForm(false)
+    
+    // Here you would typically also save to a backend API
+    console.log('New visit created:', newVisitData)
+    alert('Visit saved successfully!')
+  }
+
+  const handleCancelNewVisit = () => {
+    setShowVisitForm(false)
+  }
 
   if (loading) {
     return (
@@ -52,9 +74,14 @@ function PatientDetail() {
     <div className="patient-detail-container">
       {/* Header Section */}
       <div className="detail-header">
-        <button onClick={() => navigate('/')} className="back-button">
-          ← Back to Patients
-        </button>
+        <div className="header-actions">
+          <button onClick={() => navigate('/')} className="back-button">
+            ← Back to Patients
+          </button>
+          <button onClick={() => setShowVisitForm(true)} className="new-visit-button">
+            + Create New Visit
+          </button>
+        </div>
         <div className="patient-header-info">
           <h1>{patient.patient_id}</h1>
           <div className="patient-demographics">
@@ -180,6 +207,16 @@ function PatientDetail() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Visit Form Modal */}
+      {showVisitForm && (
+        <VisitForm
+          patientId={patient.patient_id}
+          visitNumber={patient.visits.length + 1}
+          onSave={handleSaveNewVisit}
+          onCancel={handleCancelNewVisit}
+        />
       )}
     </div>
   )
