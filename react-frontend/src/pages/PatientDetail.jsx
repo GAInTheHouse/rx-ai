@@ -30,10 +30,18 @@ function PatientDetail() {
   }, [patientId])
 
   const handleSaveNewVisit = (newVisitData) => {
+    console.log('💾 Saving new visit with data:', newVisitData)
+    
+    // Ensure questionnaire_responses is properly structured
+    const visitToSave = {
+      ...newVisitData,
+      questionnaire_responses: newVisitData.questionnaire_responses || null
+    }
+    
     // Add the new visit to the patient's visits array
     const updatedPatient = {
       ...patient,
-      visits: [...patient.visits, newVisitData]
+      visits: [...patient.visits, visitToSave]
     }
     
     setPatient(updatedPatient)
@@ -41,8 +49,18 @@ function PatientDetail() {
     setShowVisitForm(false)
     
     // Here you would typically also save to a backend API
-    console.log('New visit created:', newVisitData)
-    alert('Visit saved successfully!')
+    console.log('✅ New visit created with questionnaire responses:', {
+      visitId: visitToSave.visit_id,
+      hasQuestionnaireResponses: !!visitToSave.questionnaire_responses,
+      responseCount: visitToSave.questionnaire_responses 
+        ? Object.keys(visitToSave.questionnaire_responses).length 
+        : 0
+    })
+    
+    alert('Visit saved successfully!' + 
+      (visitToSave.questionnaire_responses 
+        ? ` (${Object.keys(visitToSave.questionnaire_responses).length} questionnaire responses included)` 
+        : ''))
   }
 
   const handleCancelNewVisit = () => {
@@ -203,6 +221,26 @@ function PatientDetail() {
               </h3>
               <div className="detail-content">
                 <p className="clinical-note-text">{selectedVisit.clinical_provider_note}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Questionnaire Responses - Full Width */}
+          {selectedVisit.questionnaire_responses && Object.keys(selectedVisit.questionnaire_responses).length > 0 && (
+            <div className="detail-card questionnaire-responses">
+              <h3>
+                <span className="icon">📋</span>
+                Patient Questionnaire Responses
+              </h3>
+              <div className="detail-content">
+                <div className="questionnaire-responses-grid">
+                  {Object.entries(selectedVisit.questionnaire_responses).map(([question, answer], idx) => (
+                    <div key={idx} className="questionnaire-response-item">
+                      <div className="question-text">{question}</div>
+                      <div className="answer-text">{answer}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

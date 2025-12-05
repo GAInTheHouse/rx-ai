@@ -29,13 +29,17 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
   // Listen for questionnaire completion
   useEffect(() => {
     const handleQuestionnaireCompleted = (event) => {
-      const { questionnaireId, responses } = event.detail
+      console.log('📩 Received questionnaire completion event (CustomEvent):', event.detail)
+      
+      const { questionnaireId, formattedResponses } = event.detail
       
       if (questionnaireId === questionnaireStatus.questionnaireId) {
-        // Auto-populate responses in form
+        console.log('✅ Matching questionnaire! Updating form with responses:', formattedResponses)
+        
+        // Auto-populate responses in form (formatted as question -> answer)
         setFormData(prev => ({
           ...prev,
-          questionnaire_responses: responses
+          questionnaire_responses: formattedResponses
         }))
         
         setQuestionnaireStatus(prev => ({
@@ -44,15 +48,69 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
         }))
 
         alert('✅ Patient has completed the questionnaire! Responses have been added to this visit.')
+      } else {
+        console.log('❌ Questionnaire ID mismatch:', {
+          expected: questionnaireStatus.questionnaireId,
+          received: questionnaireId
+        })
       }
     }
 
-    window.addEventListener('questionnaireCompleted', handleQuestionnaireCompleted)
-    
-    return () => {
-      window.removeEventListener('questionnaireCompleted', handleQuestionnaireCompleted)
+    // Listen for cross-tab communication via localStorage
+    const handleStorageEvent = (event) => {
+      if (event.key === 'questionnaire_cross_tab_event' && event.newValue) {
+        console.log('📩 Received questionnaire completion event (Storage):', event.newValue)
+        
+        try {
+          const data = JSON.parse(event.newValue)
+          
+          if (data.type === 'questionnaireCompleted' && 
+              data.questionnaireId === questionnaireStatus.questionnaireId) {
+            console.log('✅ Matching questionnaire! Updating form with responses:', data.formattedResponses)
+            
+            // Auto-populate responses in form
+            setFormData(prev => ({
+              ...prev,
+              questionnaire_responses: data.formattedResponses
+            }))
+            
+            setQuestionnaireStatus(prev => ({
+              ...prev,
+              completed: true
+            }))
+
+            alert('✅ Patient has completed the questionnaire! Responses have been added to this visit.')
+          } else {
+            console.log('❌ Questionnaire ID mismatch:', {
+              expected: questionnaireStatus.questionnaireId,
+              received: data.questionnaireId
+            })
+          }
+        } catch (error) {
+          console.error('Error parsing storage event:', error)
+        }
+      }
     }
-  }, [questionnaireStatus.questionnaireId])
+
+    // Only add listeners if questionnaire is released
+    if (questionnaireStatus.released && questionnaireStatus.questionnaireId) {
+      console.log('👂 Listening for questionnaire completion:', questionnaireStatus.questionnaireId)
+      console.log('   - CustomEvent listener: active')
+      console.log('   - Storage event listener: active (for cross-tab)')
+      
+      // Listen for same-tab events
+      window.addEventListener('questionnaireCompleted', handleQuestionnaireCompleted)
+      
+      // Listen for cross-tab events via localStorage
+      window.addEventListener('storage', handleStorageEvent)
+      
+      return () => {
+        console.log('🔇 Removing questionnaire listeners')
+        window.removeEventListener('questionnaireCompleted', handleQuestionnaireCompleted)
+        window.removeEventListener('storage', handleStorageEvent)
+      }
+    }
+  }, [questionnaireStatus.questionnaireId, questionnaireStatus.released])
 
   const handleReleaseQuestionnaire = async () => {
     setQuestionnaireStatus(prev => ({ ...prev, isGenerating: true }))
@@ -391,6 +449,19 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
                         <h4>Response Summary:</h4>
                         <div className="response-count">
                           {Object.keys(formData.questionnaire_responses).length} questions answered
+                        </div>
+                        <div className="responses-list">
+                          {Object.entries(formData.questionnaire_responses).slice(0, 3).map(([question, answer], idx) => (
+                            <div key={idx} className="response-preview-item">
+                              <strong>{question}</strong>
+                              <p>{answer.length > 50 ? answer.substring(0, 50) + '...' : answer}</p>
+                            </div>
+                          ))}
+                          {Object.keys(formData.questionnaire_responses).length > 3 && (
+                            <p className="more-responses">
+                              + {Object.keys(formData.questionnaire_responses).length - 3} more responses
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}

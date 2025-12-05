@@ -30,10 +30,11 @@ function PatientView() {
     setSelectedQuestionnaire(questionnaire)
   }
 
-  const handleSubmitQuestionnaire = (questionnaireId, responses) => {
-    QuestionnaireManager.submitResponses(questionnaireId, responses)
+  const handleSubmitQuestionnaire = (questionnaireId, responses, formattedResponses) => {
+    QuestionnaireManager.submitResponses(questionnaireId, responses, formattedResponses)
     setSelectedQuestionnaire(null)
     loadPendingQuestionnaires()
+    alert('✅ Questionnaire submitted successfully! Your responses have been sent to your provider.')
   }
 
   const handleCancelQuestionnaire = () => {

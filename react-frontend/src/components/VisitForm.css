@@ -380,6 +380,42 @@
   font-size: 14px;
   color: #155724;
   font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.responses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.response-preview-item {
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 3px solid #28a745;
+}
+
+.response-preview-item strong {
+  display: block;
+  font-size: 13px;
+  color: #155724;
+  margin-bottom: 4px;
+}
+
+.response-preview-item p {
+  margin: 0;
+  font-size: 13px;
+  color: #333;
+}
+
+.more-responses {
+  text-align: center;
+  color: #6c757d;
+  font-size: 13px;
+  font-style: italic;
+  margin: 8px 0 0 0;
 }
 
 /* Responsive Design */

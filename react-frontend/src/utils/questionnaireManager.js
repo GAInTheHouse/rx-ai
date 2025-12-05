@@ -66,18 +66,44 @@ export const QuestionnaireManager = {
   },
 
   // Submit questionnaire responses
-  submitResponses: (questionnaireId, responses) => {
+  submitResponses: (questionnaireId, responses, formattedResponses) => {
     const questionnaire = QuestionnaireManager.getQuestionnaire(questionnaireId)
     if (questionnaire) {
       questionnaire.responses = responses
+      questionnaire.formattedResponses = formattedResponses // Question text -> answer
       questionnaire.status = 'completed'
       questionnaire.completedAt = new Date().toISOString()
       localStorage.setItem(`questionnaire_${questionnaireId}`, JSON.stringify(questionnaire))
       
-      // Trigger event for provider to listen to (simulate real-time update)
-      window.dispatchEvent(new CustomEvent('questionnaireCompleted', { 
-        detail: { questionnaireId, responses } 
-      }))
+      // Method 1: Dispatch event in current tab
+      const event = new CustomEvent('questionnaireCompleted', { 
+        detail: { 
+          questionnaireId, 
+          responses,
+          formattedResponses 
+        } 
+      })
+      window.dispatchEvent(event)
+      
+      // Method 2: Use localStorage to communicate across tabs
+      // Set a temporary flag that triggers storage event in other tabs
+      const crossTabMessage = {
+        type: 'questionnaireCompleted',
+        questionnaireId,
+        formattedResponses,
+        timestamp: Date.now()
+      }
+      localStorage.setItem('questionnaire_cross_tab_event', JSON.stringify(crossTabMessage))
+      
+      // Remove the flag immediately (this still triggers storage event in other tabs)
+      setTimeout(() => {
+        localStorage.removeItem('questionnaire_cross_tab_event')
+      }, 100)
+      
+      console.log('✅ Questionnaire submitted! Events dispatched:', {
+        questionnaireId,
+        responseCount: Object.keys(formattedResponses).length
+      })
     }
   },
 

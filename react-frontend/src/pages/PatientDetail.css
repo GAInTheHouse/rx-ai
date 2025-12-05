@@ -263,6 +263,39 @@
   border-left: 4px solid #0056b3;
 }
 
+/* Questionnaire Responses - Full Width */
+.questionnaire-responses {
+  grid-column: 1 / -1;
+  margin-top: 20px;
+}
+
+.questionnaire-responses-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.questionnaire-response-item {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid #28a745;
+}
+
+.question-text {
+  font-weight: 600;
+  color: #155724;
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.answer-text {
+  color: #333;
+  line-height: 1.6;
+  font-size: 14px;
+  padding-left: 12px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .header-actions {

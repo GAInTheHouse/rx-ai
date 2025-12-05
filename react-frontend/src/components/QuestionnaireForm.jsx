@@ -51,7 +51,19 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel }) {
     e.preventDefault()
     
     if (validateForm()) {
-      onSubmit(questionnaire.id, responses)
+      // Format responses as question -> answer mapping
+      const formattedResponses = {}
+      questionnaire.questions.forEach(question => {
+        const answer = responses[question.id]
+        if (answer !== undefined && answer !== null && answer !== '') {
+          // Store with question text as key
+          formattedResponses[question.question] = Array.isArray(answer) 
+            ? answer.join(', ')  // Join array responses with commas
+            : answer.toString()
+        }
+      })
+      
+      onSubmit(questionnaire.id, responses, formattedResponses)
     } else {
       alert('Please answer all required questions before submitting.')
     }
