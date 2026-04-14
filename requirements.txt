@@ -1,18 +1,24 @@
 # Rx-AI Questionnaire Generator API Requirements
 
-# Core Framework - Let pip resolve compatible versions
+# Core Framework
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.11.9
 
 # AI/ML Framework
 crewai>=1.0.0
-openai>=1.10.0
+langchain-google-genai>=2.0.0
+
+# Google Cloud services
+google-cloud-aiplatform>=1.60.0
+google-cloud-texttospeech>=2.17.0
+google-cloud-speech>=2.27.0
+google-generativeai>=0.8.0
 
 # Utilities
 python-dotenv>=1.0.0
 python-multipart>=0.0.6
-
-# CORS Support
 aiofiles>=23.2.1
 
+# Evaluation
+deepeval>=1.0.0

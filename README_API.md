@@ -1,73 +1,116 @@
 # Rx-AI Dynamic Questionnaire API
 
-This API uses CrewAI with multiple AI agents to generate personalized patient questionnaires based on their medical history and current visit context.
+This API uses **CrewAI** with three sequential AI agents and **Google Cloud Vertex AI (Gemini 2.5 Flash)** to generate personalised patient questionnaires, convert questions to speech, transcribe patient answers, and describe patient-submitted photos.
+
+---
 
 ## Setup
 
-### Quick Start (Recommended)
+### Quick start (recommended)
 
 **One-time setup:**
+
 ```bash
 ./setup_conda.sh
 ```
 
-This will:
-- Create a conda environment named `rx-ai` with Python 3.11
-- Install all dependencies from `requirements.txt`
-- Create a `.env` template file
+Then copy the environment template and fill in your GCP details:
 
-**Then edit `.env` and add your OpenAI API key:**
 ```bash
-OPENAI_API_KEY=your_openai_api_key_here
+cp .env.example .env
+# edit .env with your values
 ```
 
 **Start the server:**
+
 ```bash
 ./start_api.sh
+# or: python api.py
 ```
 
-### Manual Setup
+---
 
-If you prefer to set up manually:
+### Manual setup
 
-#### 1. Create Conda Environment
+#### 1. Create Conda environment
 
 ```bash
 conda create -n rx-ai python=3.11
 conda activate rx-ai
-```
-
-#### 2. Install Dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-#### 3. Configure Environment
+#### 2. Configure Google Cloud credentials
 
-Create a `.env` file in the project root:
+You need a GCP service account with the following roles:
+
+| Role | Purpose |
+|---|---|
+| `Vertex AI User` | CrewAI LLM calls + `/analyze-image` |
+| `Cloud Speech-to-Text ServiceAgent` | `/stt` endpoint |
+| `Cloud Text-to-Speech Editor` | `/tts` endpoint |
+
+Steps:
+1. Open [GCP Console → IAM → Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
+2. Create (or select) the `rx-ai-backend` service account
+3. Assign the three roles above
+4. Click **Keys → Add Key → JSON** and save the file to a path **outside** the repo, e.g. `~/.gcp/rx-ai-sa.json`
+
+Enable these APIs in your project:
+- [Vertex AI API](https://console.cloud.google.com/apis/library/aiplatform.googleapis.com)
+- [Cloud Text-to-Speech API](https://console.cloud.google.com/apis/library/texttospeech.googleapis.com)
+- [Cloud Speech-to-Text API](https://console.cloud.google.com/apis/library/speech.googleapis.com)
+
+#### 3. Create `.env`
 
 ```bash
-OPENAI_API_KEY=your_openai_api_key_here
+cp .env.example .env
 ```
 
-#### 4. Start the API Server
+Edit `.env` — never commit it:
+
+```bash
+# Google Cloud — Vertex AI
+GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/rx-ai-sa.json
+GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+
+# Gemini model identifiers
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_TTS_VOICE=en-US-Chirp3-HD-Aoede
+
+# Evaluation log output directory (relative to project root)
+EVAL_LOG_DIR=eval/logs
+```
+
+#### 4. Start the API server
 
 ```bash
 python api.py
 ```
 
-The server will start on `http://localhost:8000`
+The server starts on `http://localhost:8000`.
+
+---
 
 ## API Endpoints
 
-### 1. **Generate Dynamic Questionnaire** (NEW)
+### `GET /patients`
 
-**Endpoint:** `POST /generate-questionnaire`
+Returns all patients in the system.
 
-**Purpose:** Generate a personalized questionnaire based on current visit context
+```bash
+curl http://localhost:8000/patients
+```
 
-**Request Body:**
+---
+
+### `POST /generate-questionnaire` *(primary — used by React frontend)*
+
+Generates a personalised questionnaire based on current visit context.
+
+**Request body:**
+
 ```json
 {
   "patient_id": "P001",
@@ -81,6 +124,7 @@ The server will start on `http://localhost:8000`
 ```
 
 **Response:**
+
 ```json
 {
   "questions": [
@@ -95,7 +139,7 @@ The server will start on `http://localhost:8000`
     },
     {
       "id": "q2",
-      "question": "On a scale of 1-10, how would you rate the numbness in your feet?",
+      "question": "On a scale of 1–10, how would you rate the numbness in your feet?",
       "type": "scale",
       "source": "Diabetic neuropathy screening",
       "rationale": "Assess peripheral neuropathy progression",
@@ -109,105 +153,183 @@ The server will start on `http://localhost:8000`
 }
 ```
 
-### 2. **Get Questionnaire** (Legacy)
+---
 
-**Endpoint:** `POST /questionnaire`
+### `POST /questionnaire` *(legacy)*
 
-**Purpose:** Generate questionnaire from stored patient data only
+Generates a questionnaire from stored patient data only (no current visit context).
 
-**Request Body:**
+```json
+{ "patient_id": "P001" }
+```
+
+---
+
+### `POST /tts`
+
+Converts question text to speech. Returns an **mp3 audio stream**.
+
+**Request body:**
+
 ```json
 {
-  "patient_id": "P001"
+  "text": "How are you feeling compared to your last visit?",
+  "voice": "en-US-Chirp3-HD-Aoede"
 }
 ```
 
-### 3. **List Patients**
+`voice` is optional — defaults to `GEMINI_TTS_VOICE` env var.
 
-**Endpoint:** `GET /patients`
+**Verify:**
 
-Returns list of all patients in the system.
-
-### 4. **Web Interface**
-
-**Endpoint:** `GET /`
-
-Simple web interface for testing the API directly in your browser.
-
-## How It Works
-
-The API uses **3 AI Agents** in a sequential pipeline:
-
-1. **Medical Data Deduplicator**
-   - Removes duplicate information across visits
-   - Identifies new developments and changes
-
-2. **Healthcare Data Summarizer**
-   - Extracts key problems requiring follow-up
-   - Categorizes issues by medical concern
-   - Identifies risk factors
-
-3. **Patient Questionnaire Generator**
-   - Creates personalized questions based on patient context
-   - Uses validated scales (PHQ-9, GAD-7, pain scales, etc.)
-   - Generates 3-8 targeted questions per visit
-
-## Frontend Integration
-
-The React frontend automatically calls this API when the "Release Questionnaire to Patient" button is clicked in the Visit Form.
-
-**File:** `react-frontend/src/utils/questionnaireManager.js`
-
-```javascript
-const generatedQuestionnaire = await DynamicQuestionnaireGenerator.generateQuestionnaire(
-  patientData,
-  visitContext
-)
+```bash
+curl -X POST http://localhost:8000/tts \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Hello, how are you feeling today?"}' \
+  --output test.mp3 && open test.mp3
 ```
+
+---
+
+### `POST /stt`
+
+Transcribes patient speech to text. Accepts `multipart/form-data` with an audio file field named `audio`.
+
+Supported codecs: `audio/webm;codecs=opus` (browser `MediaRecorder` default), `audio/mp4`.
+
+**Response:**
+
+```json
+{
+  "transcript": "I have been feeling some dizziness in the morning.",
+  "confidence": 0.962
+}
+```
+
+**Verify:**
+
+```bash
+curl -X POST http://localhost:8000/stt \
+  -F "audio=@test.webm"
+```
+
+---
+
+### `POST /analyze-image`
+
+Describes a patient-submitted photo in clinical terms using Gemini 2.5 Flash multimodal.
+
+**Request body:**
+
+```json
+{
+  "image_base64": "<standard base64, no data-URI prefix>",
+  "question": "Can you show us the affected area on your foot?",
+  "patient_id": "P001",
+  "question_id": "q3"
+}
+```
+
+**Response:**
+
+```json
+{
+  "description": "The image shows the lateral aspect of the left foot with a 2–3 cm area of reddened, slightly raised skin near the fifth metatarsal. No open wound or discharge is visible."
+}
+```
+
+**Verify:**
+
+```bash
+IMAGE_B64=$(base64 -i your_photo.jpg | tr -d '\n')
+curl -X POST http://localhost:8000/analyze-image \
+  -H "Content-Type: application/json" \
+  -d "{\"image_base64\":\"$IMAGE_B64\",\"question\":\"Show us the area of concern.\"}"
+```
+
+---
+
+## How it works
+
+### Question generation — 3-agent CrewAI pipeline (Gemini 2.5 Flash)
+
+1. **Medical Data Deduplicator** — removes duplicate information across visits and clinical notes
+2. **Healthcare Data Summarizer** — identifies key problems and risk factors requiring patient input
+3. **Patient Questionnaire Generator** — creates 3–8 targeted, validated questions
+
+Typical pipeline latency: **8–15 seconds** (3 sequential LLM calls).
+
+### Voice endpoints (TTS / STT)
+
+- **`/tts`** — Google Cloud Text-to-Speech with Chirp3 HD voices (highest quality, low latency)
+- **`/stt`** — Cloud Speech-to-Text v2 with Chirp 2 model; `AutoDetectDecodingConfig` handles webm/opus natively; medical vocabulary hints are included
+
+### Image analysis
+
+- **`/analyze-image`** — same Gemini 2.5 Flash model as the LLM, called with an inline image part + clinical prompt; returns 2–4 sentences of plain text
+
+---
+
+## Evaluation logging
+
+Every AI call (question generation, TTS, STT, image analysis) writes a JSONL entry to `eval/logs/<date>.jsonl` via the `log_ai_call` async context manager in `eval/eval_logger.py`.
+
+Log schema:
+
+```json
+{
+  "session_id": "uuid4",
+  "feature": "stt | tts | image_analysis | question_generation",
+  "model": "model-name-or-voice",
+  "input": {},
+  "output": {},
+  "latency_ms": 1234,
+  "timestamp": "2026-04-14T10:00:00Z",
+  "patient_id": "P001",
+  "question_id": "q2",
+  "error": null
+}
+```
+
+These logs feed the evaluation pipeline described in `README_EVAL.md` (created in Week 3).
+
+---
 
 ## Troubleshooting
 
-### API Not Connecting
+### API not connecting
 
-If you see "Cannot connect to AI server" in the frontend:
+1. Check the server is running: `python api.py`
+2. Verify `http://localhost:8000` is reachable
+3. Confirm `.env` has valid `GOOGLE_APPLICATION_CREDENTIALS` pointing to the service account JSON
 
-1. Make sure the API is running: `python api.py`
-2. Check that it's on port 8000: `http://localhost:8000`
-3. Verify your `.env` file has a valid OpenAI API key
+### CORS errors
 
-### CORS Errors
+The API allows `http://localhost:5173` (Vite) and `http://localhost:3000`. Update `allow_origins` in `api.py` if using a different port.
 
-The API is configured to allow requests from:
-- `http://localhost:5173` (Vite dev server)
-- `http://localhost:3000` (Create React App)
+### `403 Permission denied` from Google Cloud
 
-If using a different port, update the `allow_origins` in `api.py`.
+The service account is missing a required role. Check the three roles listed in the setup section above.
 
-### Slow Response Times
+### TTS voice not found
 
-The AI generation process typically takes **10-15 seconds** because:
-- CrewAI runs 3 agents sequentially
-- Each agent makes LLM calls to OpenAI
-- Complex reasoning is performed
+Chirp3 HD voices may need to be enabled in your GCP project. Verify availability at:
+**GCP Console → Text-to-Speech → Voice list → filter by "Chirp3 HD"**
 
-This is normal behavior for production-quality questionnaire generation.
+### Slow responses
 
-## Development Notes
+- CrewAI pipeline: 8–15 seconds is normal (3 sequential LLM calls to Gemini)
+- TTS/STT: 1–3 seconds round-trip to Google Cloud APIs
+- If event loop blocking is observed under load, the sync SDK calls in `/tts` and `/stt` can be wrapped in `asyncio.get_event_loop().run_in_executor(None, ...)` — defer this to Week 2
 
-- The API uses in-memory patient data loaded at startup
-- Patient data is loaded from `data/final_merged_patient_data.json`
-- All AI processing happens synchronously (can be optimized with async tasks for production)
-- Questionnaires are generated fresh for each request (no caching)
+---
 
-## Production Considerations
+## Production considerations
 
-For production deployment:
-
-1. **Database:** Replace in-memory data with proper database
-2. **Caching:** Cache generated questionnaires to reduce API costs
-3. **Async Processing:** Move AI generation to background tasks
-4. **Rate Limiting:** Add rate limits to prevent abuse
-5. **Authentication:** Add proper auth/authorization
-6. **Monitoring:** Add logging and error tracking
-7. **Scaling:** Deploy with multiple workers (Gunicorn + Uvicorn)
-
+1. **Database** — replace in-memory patient JSON with a proper database
+2. **Caching** — cache generated questionnaires to reduce LLM calls
+3. **Async SDK calls** — move `synthesize_speech` and `recognize` to thread pool executor
+4. **BigQuery eval sink** — update `eval_logger.py` to stream to BigQuery (see Week 2 plan)
+5. **Rate limiting** — add per-patient request throttling
+6. **Authentication** — add proper auth/authorization before patient data is accessible
+7. **HTTPS** — `getUserMedia` (camera/mic) requires HTTPS in production; localhost is exempt
