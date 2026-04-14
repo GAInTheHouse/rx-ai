@@ -7,7 +7,7 @@ pydantic>=2.11.9
 
 # AI/ML Framework
 crewai>=1.0.0
-langchain-google-genai>=2.0.0
+langchain-google-vertexai>=2.0.0
 
 # Google Cloud services
 google-cloud-aiplatform>=1.60.0

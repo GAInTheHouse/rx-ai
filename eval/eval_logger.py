@@ -25,6 +25,7 @@ Usage:
     # log entry is written automatically on context exit, even on exception
 """
 
+import asyncio
 import json
 import os
 import time
@@ -35,7 +36,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncGenerator, Optional
 
-_LOG_DIR = Path(os.getenv("EVAL_LOG_DIR", "eval/logs"))
+# Anchor the log directory to the repo root so it is stable regardless of the
+# working directory used to launch the server (uvicorn, systemd, etc.).
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_env_log_dir = os.getenv("EVAL_LOG_DIR", "")
+if _env_log_dir:
+    _raw = Path(_env_log_dir)
+    _LOG_DIR = _raw if _raw.is_absolute() else _REPO_ROOT / _raw
+else:
+    _LOG_DIR = _REPO_ROOT / "eval" / "logs"
+
+_write_lock = asyncio.Lock()
 
 
 def _log_path() -> Path:
@@ -83,8 +94,9 @@ async def log_ai_call(
             "error": error,
         }
         try:
-            async with aiofiles.open(_log_path(), mode="a") as f:
-                await f.write(json.dumps(entry) + "\n")
+            async with _write_lock:
+                async with aiofiles.open(_log_path(), mode="a") as f:
+                    await f.write(json.dumps(entry) + "\n")
         except Exception as log_exc:
             # Never let logging failures propagate into the API response
             print(f"[eval_logger] Failed to write log entry: {log_exc}")

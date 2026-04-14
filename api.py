@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import os
@@ -11,11 +12,10 @@ from eval.eval_logger import log_ai_call
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from google.cloud import texttospeech
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_vertexai import ChatVertexAI
 from pydantic import BaseModel
 from vertexai.generative_models import GenerativeModel, Part
 
@@ -32,6 +32,12 @@ vertexai.init(
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 _GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
 _GCP_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+
+if not _GCP_PROJECT:
+    raise RuntimeError(
+        "GOOGLE_CLOUD_PROJECT environment variable is not set. "
+        "Copy .env.example to .env and fill in your GCP project ID."
+    )
 
 # ─────────────────────────────────────────────
 # Google Cloud service clients (initialised once at startup)
@@ -71,10 +77,9 @@ except FileNotFoundError:
 # ─────────────────────────────────────────────
 
 def create_agents():
-    llm = ChatGoogleGenerativeAI(
-        model=GEMINI_MODEL,
+    llm = ChatVertexAI(
+        model_name=GEMINI_MODEL,
         temperature=0.2,
-        convert_system_message_to_human=True,
     )
     return [
         Agent(
@@ -456,7 +461,8 @@ async def text_to_speech(request: TTSRequest):
         audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3,
         )
-        tts_response = _tts_client.synthesize_speech(
+        tts_response = await asyncio.to_thread(
+            _tts_client.synthesize_speech,
             input=synthesis_input,
             voice=voice_params,
             audio_config=audio_config,
@@ -514,7 +520,7 @@ async def speech_to_text(audio: UploadFile = File(...)):
             config=config,
             content=audio_bytes,
         )
-        stt_response = _stt_client.recognize(request=stt_request)
+        stt_response = await asyncio.to_thread(_stt_client.recognize, request=stt_request)
 
         transcript = ""
         confidence = 0.0
@@ -535,10 +541,13 @@ async def analyze_image(request: ImageAnalysisRequest):
     Accepts a base64-encoded image (JPEG) and the question that prompted the photo.
     Returns { description }.
     """
+    _MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB decoded limit
     try:
-        image_bytes = base64.b64decode(request.image_base64)
+        image_bytes = base64.b64decode(request.image_base64, validate=True)
     except Exception:
         raise HTTPException(status_code=400, detail="image_base64 is not valid base64")
+    if len(image_bytes) > _MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=400, detail="Image too large (max 10 MB)")
 
     async with log_ai_call(
         feature="image_analysis",
@@ -559,7 +568,9 @@ async def analyze_image(request: ImageAnalysisRequest):
             "Be concise (2–4 sentences). Do not speculate beyond what is visible. "
             "Output plain text only — no markdown, no bullet points."
         )
-        vision_response = vision_model.generate_content([image_part, prompt])
+        vision_response = await asyncio.to_thread(
+            vision_model.generate_content, [image_part, prompt]
+        )
         description = vision_response.text.strip()
         log_output["description"] = description
 
