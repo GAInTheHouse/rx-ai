@@ -1,1 +1,15 @@
 .env
+.DS_Store
+.cursor/
+
+# Evaluation logs (may contain patient data)
+eval/logs/*.jsonl
+
+# GCP service account keys (if accidentally placed in repo)
+*.json
+!data/*.json
+!react-frontend/public/data/*.json
+!package.json
+!package-lock.json
+!tsconfig*.json
+!vite.config.*
