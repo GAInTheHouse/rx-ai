@@ -57,6 +57,9 @@ function RecordButton({
   const handlePointerDown = useCallback(
     (e) => {
       e.preventDefault() // prevent text selection / context menu on long-press
+      // Capture the pointer so pointerup / pointercancel always fire on this
+      // element even if the finger/cursor moves outside the button bounds.
+      e.currentTarget.setPointerCapture(e.pointerId)
       holdActiveRef.current = true
       handleStart()
     },
@@ -71,6 +74,19 @@ function RecordButton({
   }, [handleStop])
 
   const handlePointerLeave = useCallback(() => {
+    // Fires after pointer capture is released (post-pointerup); holdActiveRef
+    // will already be false in the normal case. Kept as a secondary safety net
+    // for browsers that don't support setPointerCapture.
+    if (holdActiveRef.current) {
+      holdActiveRef.current = false
+      handleStop()
+    }
+  }, [handleStop])
+
+  // OS gesture interruptions, modal dialogs, and some browser actions fire
+  // pointercancel instead of pointerup. Without this, holdActiveRef and
+  // isRecording can be left permanently stuck in the recording state.
+  const handlePointerCancel = useCallback(() => {
     if (holdActiveRef.current) {
       holdActiveRef.current = false
       handleStop()
@@ -86,6 +102,7 @@ function RecordButton({
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
+        onPointerCancel={handlePointerCancel}
         disabled={disabled}
         aria-label={isRecording ? 'Recording — release to stop' : 'Hold to record'}
         aria-pressed={isRecording}

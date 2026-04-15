@@ -6,8 +6,10 @@ let _chunks = []
 /**
  * Returns the best audio MIME type supported by this browser's MediaRecorder.
  * Preference order: webm/opus (Chrome/Firefox) → mp4 (Safari) → ogg/opus → plain webm.
+ * Returns '' if MediaRecorder is unavailable (non-secure context, unsupported browser).
  */
 export function getSupportedMimeType() {
+  if (typeof MediaRecorder === 'undefined') return ''
   const candidates = [
     'audio/webm;codecs=opus',
     'audio/mp4',
@@ -20,9 +22,17 @@ export function getSupportedMimeType() {
 /**
  * Requests microphone access and starts a MediaRecorder session.
  * Resolves with the MIME type that was selected.
- * Rejects if getUserMedia is denied or MediaRecorder construction fails.
+ * Rejects if MediaRecorder is unsupported, getUserMedia is denied, or recorder
+ * construction fails. On any post-getUserMedia failure the mic stream is always
+ * released before rethrowing.
  */
 export async function startRecording() {
+  if (typeof MediaRecorder === 'undefined') {
+    throw new Error(
+      'MediaRecorder is not supported in this browser or context (HTTPS required outside localhost)',
+    )
+  }
+
   if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
     throw new Error('A recording session is already active')
   }
@@ -33,14 +43,24 @@ export async function startRecording() {
   const options = mimeType ? { mimeType } : {}
 
   _chunks = []
-  _mediaRecorder = new MediaRecorder(_stream, options)
 
-  _mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0) _chunks.push(e.data)
+  try {
+    _mediaRecorder = new MediaRecorder(_stream, options)
+
+    _mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) _chunks.push(e.data)
+    }
+
+    // 100 ms timeslice so ondataavailable fires incrementally (not just on stop)
+    _mediaRecorder.start(100)
+  } catch (err) {
+    // Release the mic so the browser indicator clears and resources are freed
+    _stream.getTracks().forEach((t) => t.stop())
+    _stream = null
+    _mediaRecorder = null
+    _chunks = []
+    throw err
   }
-
-  // 100 ms timeslice so ondataavailable fires incrementally (not just on stop)
-  _mediaRecorder.start(100)
 
   return { mimeType: _mediaRecorder.mimeType }
 }

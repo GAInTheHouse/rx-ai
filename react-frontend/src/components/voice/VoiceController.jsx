@@ -30,6 +30,11 @@ const VoiceController = forwardRef(function VoiceController(
   // without needing status in their dependency arrays.
   const statusRef = useRef('idle')
 
+  // Monotonically increasing token. Each speak() call claims a new token so
+  // that async continuations and onended handlers from superseded calls can
+  // detect they are stale and skip state updates.
+  const playbackTokenRef = useRef(0)
+
   const updateStatus = useCallback(
     (next) => {
       statusRef.current = next
@@ -50,12 +55,24 @@ const VoiceController = forwardRef(function VoiceController(
   /**
    * Fetch /tts, decode the returned MP3 via AudioContext, and play it.
    * Cancels any audio that is currently playing before starting.
-   * Resolves when playback ends naturally (or is cancelled).
+   * Resolves when playback ends naturally (or is superseded by a newer speak()).
+   *
+   * Race / clobber safety:
+   *  - The playback token is incremented BEFORE the old source is stopped, so
+   *    its onended handler sees a stale token and skips state updates.
+   *  - Token checks after each await point bail out if a newer speak() won.
    */
   const speak = useCallback(
     async (text) => {
-      // Cancel any in-flight playback
+      // Claim a new token first — any prior speak()'s onended or async
+      // continuation will see playbackTokenRef.current !== their captured token
+      // and become no-ops.
+      const token = ++playbackTokenRef.current
+
+      // Detach the old source's onended handler BEFORE stopping it so the
+      // handler cannot fire and clobber the new playback's state/refs.
       if (sourceNodeRef.current) {
+        sourceNodeRef.current.onended = null
         try {
           sourceNodeRef.current.stop()
         } catch {
@@ -75,6 +92,9 @@ const VoiceController = forwardRef(function VoiceController(
 
         if (!res.ok) throw new Error(`TTS request failed (${res.status})`)
 
+        // A newer speak() may have started while this fetch was in flight
+        if (playbackTokenRef.current !== token) return
+
         // Response is raw audio/mpeg bytes — not JSON
         const arrayBuffer = await res.arrayBuffer()
         const audioCtx = getAudioContext()
@@ -83,6 +103,10 @@ const VoiceController = forwardRef(function VoiceController(
         if (audioCtx.state === 'suspended') await audioCtx.resume()
 
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+
+        // Check again after the potentially slow decode step
+        if (playbackTokenRef.current !== token) return
+
         const source = audioCtx.createBufferSource()
         source.buffer = audioBuffer
         source.connect(audioCtx.destination)
@@ -91,15 +115,20 @@ const VoiceController = forwardRef(function VoiceController(
 
         return new Promise((resolve) => {
           source.onended = () => {
-            sourceNodeRef.current = null
-            updateStatus('idle')
+            // Only update shared state if we are still the active playback
+            if (playbackTokenRef.current === token) {
+              sourceNodeRef.current = null
+              updateStatus('idle')
+            }
             resolve()
           }
           source.start()
         })
       } catch (err) {
-        updateStatus('idle')
-        onError?.(err)
+        if (playbackTokenRef.current === token) {
+          updateStatus('idle')
+          onError?.(err)
+        }
         throw err
       }
     },
