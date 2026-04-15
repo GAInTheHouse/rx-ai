@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import './CameraCapture.css'
 
+const FOCUSABLE_SELECTORS =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 function CameraCapture({ onCapture, onClose, prompt }) {
   const [permission, setPermission] = useState('pending')
   const [hasSnapshot, setHasSnapshot] = useState(false)
@@ -10,14 +13,36 @@ function CameraCapture({ onCapture, onClose, prompt }) {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
+  const modalRef = useRef(null)
 
+  // Clears srcObject and pauses the video before stopping tracks so browsers
+  // (notably Safari) fully release the camera indicator and underlying resources.
   const stopAllTracks = useCallback(() => {
+    if (videoRef.current) {
+      videoRef.current.pause()
+      videoRef.current.srcObject = null
+    }
     streamRef.current?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
   }, [])
 
+  // useCallback so the focus-trap effect can list it as a stable dependency.
+  const handleClose = useCallback(() => {
+    stopAllTracks()
+    onClose()
+  }, [stopAllTracks, onClose])
+
+  // Camera acquisition — guarded against missing API (non-HTTPS, old browsers).
   useEffect(() => {
     let cancelled = false
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setPermission('denied')
+      setError(
+        'Camera is not supported in this browser or context (HTTPS is required outside localhost).',
+      )
+      return
+    }
 
     navigator.mediaDevices
       .getUserMedia({ video: { facingMode: 'environment' } })
@@ -29,7 +54,13 @@ function CameraCapture({ onCapture, onClose, prompt }) {
         streamRef.current = stream
         if (videoRef.current) {
           videoRef.current.srcObject = stream
-          videoRef.current.play()
+          // play() returns a Promise that can reject under autoplay restrictions.
+          videoRef.current.play().catch((err) => {
+            if (!cancelled) {
+              setPermission('denied')
+              setError(`Camera preview failed to start: ${err.message}`)
+            }
+          })
         }
         setPermission('granted')
       })
@@ -51,6 +82,51 @@ function CameraCapture({ onCapture, onClose, prompt }) {
       stopAllTracks()
     }
   }, [stopAllTracks])
+
+  // Focus management: move focus into the modal on mount, trap Tab within it,
+  // close on Escape, and restore the previously focused element on unmount.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement
+    modalRef.current?.focus()
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleClose()
+        return
+      }
+
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = Array.from(
+          modalRef.current.querySelectorAll(FOCUSABLE_SELECTORS),
+        )
+        if (focusable.length === 0) {
+          e.preventDefault()
+          return
+        }
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        const active = document.activeElement
+
+        if (e.shiftKey) {
+          if (active === first || active === modalRef.current) {
+            e.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (active === last || active === modalRef.current) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      previouslyFocused?.focus()
+    }
+  }, [handleClose])
 
   const handleSnapshot = () => {
     const video = videoRef.current
@@ -76,11 +152,6 @@ function CameraCapture({ onCapture, onClose, prompt }) {
     onCapture(base64)
   }
 
-  const handleClose = () => {
-    stopAllTracks()
-    onClose()
-  }
-
   return (
     <div
       className="camera-modal-overlay"
@@ -88,7 +159,11 @@ function CameraCapture({ onCapture, onClose, prompt }) {
       aria-modal="true"
       aria-label="Camera capture"
     >
-      <div className="camera-modal">
+      <div
+        ref={modalRef}
+        className="camera-modal"
+        tabIndex={-1}
+      >
         <div className="camera-modal-header">
           <div className="camera-modal-header-text">
             <h2 className="camera-modal-title">Take a Photo</h2>

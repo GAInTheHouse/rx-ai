@@ -15,6 +15,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  outline: none;
 }
 
 .camera-modal-header {

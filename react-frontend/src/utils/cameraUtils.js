@@ -59,7 +59,7 @@ export function requiresCamera(questionText) {
  * @returns {string}
  */
 export function getCameraPrompt(questionText) {
-  if (!questionText) return 'Please take a photo.'
+  if (!questionText || typeof questionText !== 'string') return 'Please take a photo.'
   const lower = questionText.toLowerCase()
   const match = Object.keys(PROMPT_MAP).find((kw) => lower.includes(kw))
   return match ? PROMPT_MAP[match] : 'Please take a photo related to this question.'
