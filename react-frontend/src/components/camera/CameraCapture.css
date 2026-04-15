@@ -1,0 +1,167 @@
+.camera-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.camera-modal {
+  background: white;
+  border-radius: 16px;
+  width: min(480px, 95vw);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.camera-modal-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.camera-modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0056b3;
+}
+
+.camera-modal-prompt {
+  margin: 0;
+  font-size: 13px;
+  color: #495057;
+  line-height: 1.4;
+}
+
+.camera-close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.2s, background 0.2s;
+}
+
+.camera-close-btn:hover {
+  color: #343a40;
+  background: #f1f3f5;
+}
+
+.camera-error {
+  padding: 24px 20px;
+  text-align: center;
+  color: #dc3545;
+}
+
+.camera-error p {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.camera-error-hint {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  color: #6c757d !important;
+}
+
+.camera-video {
+  width: 100%;
+  display: block;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #000;
+}
+
+.camera-video--hidden {
+  display: none;
+}
+
+.camera-canvas {
+  width: 100%;
+  display: block;
+}
+
+.camera-canvas--hidden {
+  display: none;
+}
+
+.camera-actions {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.camera-btn {
+  flex: 1;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s, transform 0.1s;
+}
+
+.camera-btn:active {
+  transform: scale(0.97);
+}
+
+.camera-btn--capture {
+  background: #007bff;
+  color: white;
+}
+
+.camera-btn--capture:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.camera-btn--capture:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.camera-btn--retake {
+  background: #f1f3f5;
+  color: #495057;
+}
+
+.camera-btn--retake:hover {
+  background: #e2e6ea;
+}
+
+.camera-btn--confirm {
+  background: #28a745;
+  color: white;
+}
+
+.camera-btn--confirm:hover {
+  background: #1e7e34;
+}
+
+@media (max-width: 480px) {
+  .camera-modal-header {
+    padding: 12px 14px 10px;
+  }
+
+  .camera-actions {
+    padding: 10px 12px;
+    flex-direction: column;
+  }
+}
