@@ -1,6 +1,7 @@
 .env
 .DS_Store
 .cursor/
+eval/__pycache__/
 
 # Evaluation logs (may contain patient data)
 eval/logs/*.jsonl

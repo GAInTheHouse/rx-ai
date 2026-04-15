@@ -1,0 +1,58 @@
+.record-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 2px solid #d1d5db;
+  border-radius: 9999px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.record-button:hover:not(:disabled) {
+  border-color: #6b7280;
+  background: #f9fafb;
+}
+
+.record-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Active / recording state */
+.record-button--active {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #b91c1c;
+  animation: record-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes record-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+/* Hold variant — slightly larger touch target */
+.record-button--hold {
+  padding: 12px 24px;
+  font-size: 1rem;
+}
+
+.record-button__icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.record-button__label {
+  white-space: nowrap;
+}
