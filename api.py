@@ -136,8 +136,60 @@ class ImageAnalysisRequest(BaseModel):
 
 
 # ─────────────────────────────────────────────
-# Utility: parse CrewAI output into a questions list
+# Utilities: parse + normalise CrewAI question output
 # ─────────────────────────────────────────────
+
+_IMAGE_KEYWORDS = [
+    "photo", "picture", "image", "skin", "wound", "rash", "redness",
+    "swelling", "bruise", "sore", "lesion", "medication", "pill",
+    "bottle", "prescription", "insurance card", "id card",
+]
+
+_IMAGE_PROMPT_MAP = {
+    "wound":          "Please take a photo of the wound or injury.",
+    "rash":           "Please take a close-up photo of the rash.",
+    "redness":        "Please take a photo showing the area of redness.",
+    "swelling":       "Please photograph the swollen area.",
+    "bruise":         "Please photograph the bruise.",
+    "sore":           "Please photograph the sore.",
+    "lesion":         "Please photograph the lesion.",
+    "skin":           "Please take a clear photo of the affected skin area.",
+    "medication":     "Please take a photo of your medication bottle or pill.",
+    "pill":           "Please take a photo of the pill.",
+    "bottle":         "Please take a photo of the medication bottle label.",
+    "prescription":   "Please photograph your prescription label.",
+    "insurance card": "Please take a clear photo of your insurance card.",
+    "id card":        "Please take a photo of your ID card.",
+    "photo":          "Please take a photo as requested.",
+    "picture":        "Please take a photo as requested.",
+    "image":          "Please take a photo as requested.",
+}
+
+
+def _normalize_question(q: dict) -> dict:
+    """Back-fill missing fields so the frontend always receives a complete object."""
+    q.setdefault("id", f"q{id(q)}")
+    q.setdefault("type", "text")
+    q.setdefault("required", True)
+    q.setdefault("options", [])
+    q.setdefault("source", "")
+    q.setdefault("rationale", "")
+
+    question_lower = str(q.get("question", "")).lower()
+
+    # Determine requires_image from the field itself or keyword detection
+    if "requires_image" not in q:
+        q["requires_image"] = any(kw in question_lower for kw in _IMAGE_KEYWORDS)
+
+    # Determine image_prompt
+    if "image_prompt" not in q or not q.get("image_prompt"):
+        match = next((kw for kw in _IMAGE_PROMPT_MAP if kw in question_lower), None)
+        q["image_prompt"] = _IMAGE_PROMPT_MAP[match] if match else (
+            "Please take a photo related to this question." if q["requires_image"] else ""
+        )
+
+    return q
+
 
 def _extract_questions(result) -> list:
     if hasattr(result, "raw") and result.raw:
@@ -166,7 +218,7 @@ def _extract_questions(result) -> list:
     else:
         questions = []
 
-    return questions
+    return [_normalize_question(q) for q in questions if isinstance(q, dict)]
 
 
 # ─────────────────────────────────────────────
@@ -270,7 +322,9 @@ async def get_questionnaire(request: PatientRequest):
         Use the previous outputs.
         Generate 1-3 questions per problem.
         Output JSON with questionnaire containing questions array.
-        Each question should have: id, question, type, source, rationale
+        Each question must have: id, question, type, source, rationale, required,
+        options, requires_image (bool), image_prompt (str).
+        Set requires_image=true and image_prompt for wound/rash/medication/insurance questions.
         """,
         agent=question_agent,
         expected_output="JSON with questionnaire",
@@ -388,10 +442,16 @@ async def generate_dynamic_questionnaire(request: QuestionnaireGenerationRequest
                     "source": "Clinical reasoning or standard scale name",
                     "rationale": "Why this question is relevant",
                     "required": true,
-                    "options": ["option1", "option2"]
+                    "options": ["option1", "option2"],
+                    "requires_image": false,
+                    "image_prompt": ""
                 }}
             ]
         }}
+
+        Set requires_image to true and provide a short image_prompt for any question
+        where a photo of a wound, rash, medication bottle, or insurance card would
+        meaningfully improve the clinical answer. Otherwise set both to false/empty.
         """,
         agent=question_agent,
         expected_output="JSON with questions array",
@@ -501,16 +561,6 @@ async def speech_to_text(audio: UploadFile = File(...)):
             features=cloud_speech.RecognitionFeatures(
                 enable_word_confidence=True,
                 enable_automatic_punctuation=True,
-                speech_contexts=[
-                    cloud_speech.SpeechContext(
-                        phrases=[
-                            "hypertension", "metformin", "lisinopril", "diabetes",
-                            "neuropathy", "blood pressure", "medication", "symptoms",
-                            "dizziness", "shortness of breath", "chest pain",
-                            "insulin", "hemoglobin A1C", "blood glucose",
-                        ]
-                    )
-                ],
             ),
         )
         stt_request = cloud_speech.RecognizeRequest(

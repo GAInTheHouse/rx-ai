@@ -9,13 +9,11 @@ function PatientView() {
   const [pendingQuestionnaires, setPendingQuestionnaires] = useState([])
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [voiceMode, setVoiceMode] = useState(false)
 
   useEffect(() => {
     loadPendingQuestionnaires()
-    
-    // Poll for new questionnaires every 3 seconds (simulate real-time)
     const interval = setInterval(loadPendingQuestionnaires, 3000)
-    
     return () => clearInterval(interval)
   }, [patientId])
 
@@ -47,7 +45,7 @@ function PatientView() {
   if (loading) {
     return (
       <div className="patient-view-container">
-        <h2>Loading...</h2>
+        <h2>Loading…</h2>
       </div>
     )
   }
@@ -58,6 +56,7 @@ function PatientView() {
         questionnaire={selectedQuestionnaire}
         onSubmit={handleSubmitQuestionnaire}
         onCancel={handleCancelQuestionnaire}
+        voiceMode={voiceMode}
       />
     )
   }
@@ -65,24 +64,56 @@ function PatientView() {
   return (
     <div className="patient-view-container">
       <div className="patient-view-header">
-        <h1>Patient Portal</h1>
-        <p className="patient-id">Patient ID: {patientId}</p>
+        <div className="patient-view-header-top">
+          <div>
+            <h1>Patient Portal</h1>
+            <p className="patient-id">Patient ID: {patientId}</p>
+          </div>
+
+          {/* ── Voice + Camera mode toggle ─────────────────────────── */}
+          <div className="voice-mode-toggle-wrapper">
+            <span className="voice-mode-toggle-label">Input mode</span>
+            <div className="voice-mode-toggle-group" role="group" aria-label="Input mode">
+              <button
+                type="button"
+                className={`voice-mode-btn${!voiceMode ? ' voice-mode-btn--active' : ''}`}
+                onClick={() => setVoiceMode(false)}
+                aria-pressed={!voiceMode}
+              >
+                ⌨️ Text only
+              </button>
+              <button
+                type="button"
+                className={`voice-mode-btn${voiceMode ? ' voice-mode-btn--active' : ''}`}
+                onClick={() => setVoiceMode(true)}
+                aria-pressed={voiceMode}
+              >
+                🎤 Voice + Camera
+              </button>
+            </div>
+            {voiceMode && (
+              <p className="voice-mode-hint">
+                Questions will use voice input and camera where needed.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="questionnaires-section">
         <h2>Available Questionnaires</h2>
-        
+
         {pendingQuestionnaires.length === 0 ? (
           <div className="no-questionnaires">
             <div className="empty-state">
               <span className="empty-icon">📋</span>
               <h3>No Questionnaires Available</h3>
-              <p>Your doctor hasn't released any questionnaires yet. Please check back later.</p>
+              <p>Your doctor hasn&apos;t released any questionnaires yet. Please check back later.</p>
             </div>
           </div>
         ) : (
           <div className="questionnaire-cards">
-            {pendingQuestionnaires.map(questionnaire => (
+            {pendingQuestionnaires.map((questionnaire) => (
               <div key={questionnaire.id} className="questionnaire-card">
                 <div className="card-header">
                   <h3>New Questionnaire</h3>
@@ -95,16 +126,14 @@ function PatientView() {
                   <p className="question-count">
                     {questionnaire.questions.length} questions to answer
                   </p>
-                  <p className="visit-info">
-                    Visit: {questionnaire.visitId}
-                  </p>
+                  <p className="visit-info">Visit: {questionnaire.visitId}</p>
                 </div>
                 <div className="card-footer">
                   <button
                     onClick={() => handleStartQuestionnaire(questionnaire)}
                     className="start-button"
                   >
-                    Start Questionnaire →
+                    {voiceMode ? '🎤 Start with Voice + Camera →' : 'Start Questionnaire →'}
                   </button>
                 </div>
               </div>
@@ -116,9 +145,9 @@ function PatientView() {
       <div className="patient-info-box">
         <h3>ℹ️ Information</h3>
         <p>
-          Your healthcare provider may release questionnaires to gather information about your symptoms, 
-          medication compliance, and overall health status. Please complete them as soon as possible to 
-          help your provider give you the best care.
+          Your healthcare provider may release questionnaires to gather information about your
+          symptoms, medication compliance, and overall health status. Please complete them as soon
+          as possible to help your provider give you the best care.
         </p>
       </div>
     </div>
@@ -126,4 +155,3 @@ function PatientView() {
 }
 
 export default PatientView
-

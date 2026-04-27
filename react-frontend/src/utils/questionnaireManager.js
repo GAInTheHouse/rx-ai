@@ -173,7 +173,9 @@ export const DynamicQuestionnaireGenerator = {
           rationale: q.rationale || '',
           options: q.options || [],
           min: q.min,
-          max: q.max
+          max: q.max,
+          requires_image: q.requires_image ?? false,
+          image_prompt: q.image_prompt || ''
         }))
       }
     } catch (error) {
