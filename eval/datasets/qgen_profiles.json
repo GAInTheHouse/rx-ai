@@ -1,0 +1,82 @@
+[
+  {
+    "profile_id": "P_EVAL_001",
+    "description": "Type 2 diabetic patient with hypertension and peripheral neuropathy",
+    "conditions": ["Type 2 Diabetes Mellitus", "Hypertension", "Peripheral Neuropathy"],
+    "medications": ["Metformin 1000mg", "Lisinopril 10mg", "Atorvastatin 40mg"],
+    "allergies": ["Penicillin"],
+    "issues_detected": ["Elevated HbA1c 8.2%", "Blood pressure 148/92", "Foot numbness reported"],
+    "expected_question_themes": [
+      "blood glucose monitoring",
+      "medication adherence",
+      "foot examination or photo",
+      "blood pressure symptoms",
+      "dietary habits"
+    ],
+    "expected_image_triggers": ["foot", "wound", "skin"]
+  },
+  {
+    "profile_id": "P_EVAL_002",
+    "description": "Elderly patient with COPD and heart failure on multiple medications",
+    "conditions": ["COPD", "Congestive Heart Failure", "Atrial Fibrillation"],
+    "medications": ["Tiotropium inhaler", "Furosemide 40mg", "Warfarin 5mg", "Metoprolol 25mg"],
+    "allergies": ["Sulfa drugs", "NSAIDs"],
+    "issues_detected": ["SpO2 91% at last visit", "Ankle oedema", "INR sub-therapeutic"],
+    "expected_question_themes": [
+      "breathlessness on exertion",
+      "inhaler technique",
+      "ankle swelling",
+      "INR monitoring",
+      "fluid intake"
+    ],
+    "expected_image_triggers": ["swelling", "inhaler", "medication"]
+  },
+  {
+    "profile_id": "P_EVAL_003",
+    "description": "Young adult with depression and anxiety, recent medication change",
+    "conditions": ["Major Depressive Disorder", "Generalised Anxiety Disorder"],
+    "medications": ["Sertraline 50mg (new, 3 weeks)", "Lorazepam 0.5mg PRN"],
+    "allergies": [],
+    "issues_detected": ["PHQ-9 score 14 at last visit", "Sleep disturbance", "Recent dose titration"],
+    "expected_question_themes": [
+      "mood and energy level",
+      "sleep quality",
+      "sertraline side effects",
+      "anxiety triggers",
+      "suicidal ideation screening"
+    ],
+    "expected_image_triggers": []
+  },
+  {
+    "profile_id": "P_EVAL_004",
+    "description": "Post-surgical wound care patient with diabetes",
+    "conditions": ["Type 2 Diabetes Mellitus", "Post-operative wound — right leg"],
+    "medications": ["Metformin 500mg", "Cephalexin 500mg (7-day course)", "Insulin glargine 20u"],
+    "allergies": ["Latex"],
+    "issues_detected": ["Wound not fully healed at 2-week check", "Blood glucose poorly controlled"],
+    "expected_question_themes": [
+      "wound appearance",
+      "signs of infection",
+      "blood glucose levels",
+      "insulin administration",
+      "wound photo"
+    ],
+    "expected_image_triggers": ["wound", "photo", "skin", "picture"]
+  },
+  {
+    "profile_id": "P_EVAL_005",
+    "description": "Hypertensive patient needing medication reconciliation and insurance verification",
+    "conditions": ["Hypertension", "Hypercholesterolaemia"],
+    "medications": ["Amlodipine 5mg", "Rosuvastatin 20mg"],
+    "allergies": [],
+    "issues_detected": ["New insurance plan", "Prescription refill needed", "BP 155/95 at home"],
+    "expected_question_themes": [
+      "home blood pressure readings",
+      "medication side effects",
+      "insurance card update",
+      "statin muscle symptoms",
+      "lifestyle modifications"
+    ],
+    "expected_image_triggers": ["insurance", "card", "prescription", "medication bottle"]
+  }
+]
