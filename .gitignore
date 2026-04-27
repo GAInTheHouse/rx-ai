@@ -2,9 +2,16 @@
 .DS_Store
 .cursor/
 eval/__pycache__/
+__pycache__/
+*.pyc
 
 # Evaluation logs (may contain patient data)
 eval/logs/*.jsonl
+!eval/logs/.gitkeep
+
+# Evaluation reports (generated artefacts)
+eval/reports/*.json
+!eval/reports/.gitkeep
 
 # GCP service account keys (if accidentally placed in repo)
 *.json
@@ -14,6 +21,7 @@ eval/logs/*.jsonl
 !package-lock.json
 !tsconfig*.json
 !vite.config.*
+!eval/datasets/*.json
 
 #Files
 Big_Data_Adv_AI_Final_Project_Planning.pdf

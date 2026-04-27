@@ -1,0 +1,122 @@
+[
+  {
+    "id": "stt_001",
+    "category": "medication_adherence",
+    "reference_transcript": "I have been taking my metformin every morning with breakfast",
+    "notes": "Common medication adherence statement"
+  },
+  {
+    "id": "stt_002",
+    "category": "symptom_report",
+    "reference_transcript": "I have been experiencing dizziness and shortness of breath for the past three days",
+    "notes": "Multi-symptom report with duration"
+  },
+  {
+    "id": "stt_003",
+    "category": "pain_scale",
+    "reference_transcript": "My pain level is about a seven out of ten",
+    "notes": "Numeric pain scale response"
+  },
+  {
+    "id": "stt_004",
+    "category": "medication_adherence",
+    "reference_transcript": "I forgot to take my lisinopril yesterday but took it this morning",
+    "notes": "Missed dose disclosure"
+  },
+  {
+    "id": "stt_005",
+    "category": "symptom_report",
+    "reference_transcript": "I have had a persistent headache and my blood pressure has been elevated",
+    "notes": "Hypertension-related complaint"
+  },
+  {
+    "id": "stt_006",
+    "category": "lifestyle",
+    "reference_transcript": "I try to walk thirty minutes every day but sometimes I skip when my knees hurt",
+    "notes": "Exercise adherence with barrier"
+  },
+  {
+    "id": "stt_007",
+    "category": "symptom_report",
+    "reference_transcript": "My hemoglobin A1C was eight point two at my last blood test",
+    "notes": "Lab value recall — medical term accuracy test"
+  },
+  {
+    "id": "stt_008",
+    "category": "medication_adherence",
+    "reference_transcript": "Yes I take atorvastatin and aspirin every night before bed",
+    "notes": "Multiple medication names"
+  },
+  {
+    "id": "stt_009",
+    "category": "symptom_report",
+    "reference_transcript": "I have been feeling numbness and tingling in my feet especially at night",
+    "notes": "Neuropathy symptom description"
+  },
+  {
+    "id": "stt_010",
+    "category": "lifestyle",
+    "reference_transcript": "I have cut down on salt and I try to avoid sugary drinks",
+    "notes": "Dietary behaviour"
+  },
+  {
+    "id": "stt_011",
+    "category": "mental_health",
+    "reference_transcript": "I have been feeling more anxious and having trouble sleeping lately",
+    "notes": "Mental health disclosure"
+  },
+  {
+    "id": "stt_012",
+    "category": "symptom_report",
+    "reference_transcript": "My chest feels tight sometimes when I climb stairs but goes away after resting",
+    "notes": "Exertional chest tightness — cardiac concern"
+  },
+  {
+    "id": "stt_013",
+    "category": "medication_side_effects",
+    "reference_transcript": "The metformin is causing some stomach upset and nausea in the morning",
+    "notes": "Medication side effect report"
+  },
+  {
+    "id": "stt_014",
+    "category": "symptom_report",
+    "reference_transcript": "I noticed some swelling in my ankles particularly at the end of the day",
+    "notes": "Oedema symptom"
+  },
+  {
+    "id": "stt_015",
+    "category": "medication_adherence",
+    "reference_transcript": "I ran out of insulin three days ago and could not get to the pharmacy",
+    "notes": "Insulin access barrier — urgent"
+  },
+  {
+    "id": "stt_016",
+    "category": "lifestyle",
+    "reference_transcript": "I have been smoking about half a pack a day for the last twenty years",
+    "notes": "Smoking history — pack-year calculation"
+  },
+  {
+    "id": "stt_017",
+    "category": "symptom_report",
+    "reference_transcript": "My blood sugar has been running high in the mornings around one hundred and eighty",
+    "notes": "Fasting glucose report"
+  },
+  {
+    "id": "stt_018",
+    "category": "mental_health",
+    "reference_transcript": "I have had little interest in doing things and have been feeling down for two weeks",
+    "notes": "PHQ-2 depressive symptoms"
+  },
+  {
+    "id": "stt_019",
+    "category": "medication_adherence",
+    "reference_transcript": "I take all my medications but sometimes I double up if I think I missed a dose",
+    "notes": "Double-dosing behaviour — safety concern"
+  },
+  {
+    "id": "stt_020",
+    "category": "symptom_report",
+    "reference_transcript": "I feel more tired than usual and have been gaining weight without changing my diet",
+    "notes": "Hypothyroid-pattern symptoms"
+  }
+]
