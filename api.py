@@ -2,11 +2,12 @@ import asyncio
 import base64
 import json
 import os
+import re
 from typing import Any, Dict, List, Optional
 
 import uvicorn
 import vertexai
-from crewai import Agent, Crew, Process, Task
+from crewai import Agent, Crew, LLM, Process, Task
 from dotenv import load_dotenv
 from eval.eval_logger import log_ai_call
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
@@ -15,7 +16,6 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from google.cloud import texttospeech
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
-from langchain_google_vertexai import ChatVertexAI
 from pydantic import BaseModel
 from vertexai.generative_models import GenerativeModel, Part
 
@@ -38,6 +38,11 @@ if not _GCP_PROJECT:
         "GOOGLE_CLOUD_PROJECT environment variable is not set. "
         "Copy .env.example to .env and fill in your GCP project ID."
     )
+
+# LiteLLM (used by CrewAI 1.x internally) reads these env vars for Vertex AI.
+# Map from the Google-standard names we already have in .env.
+os.environ.setdefault("VERTEXAI_PROJECT", _GCP_PROJECT)
+os.environ.setdefault("VERTEXAI_LOCATION", _GCP_LOCATION)
 
 # ─────────────────────────────────────────────
 # Google Cloud service clients (initialised once at startup)
@@ -77,8 +82,11 @@ except FileNotFoundError:
 # ─────────────────────────────────────────────
 
 def create_agents():
-    llm = ChatVertexAI(
-        model_name=GEMINI_MODEL,
+    # CrewAI 1.x uses LiteLLM internally — pass a crewai.LLM instance.
+    # The vertex_ai/ prefix tells LiteLLM to route via Vertex AI using
+    # VERTEXAI_PROJECT / VERTEXAI_LOCATION env vars set above.
+    llm = LLM(
+        model=f"vertex_ai/{GEMINI_MODEL}",
         temperature=0.2,
     )
     return [
@@ -128,6 +136,18 @@ class TTSRequest(BaseModel):
     voice: Optional[str] = None  # overrides GEMINI_TTS_VOICE env var
 
 
+class QuestionItem(BaseModel):
+    id: str
+    question: str
+    type: str = "text"
+    source: Optional[str] = None
+    rationale: Optional[str] = None
+    required: bool = True
+    options: List[str] = []
+    requires_image: bool = False
+    image_prompt: str = ""
+
+
 class ImageAnalysisRequest(BaseModel):
     image_base64: str           # standard base64 — no data-URI prefix
     question: str               # the check-in question that prompted the photo
@@ -139,12 +159,32 @@ class ImageAnalysisRequest(BaseModel):
 # Utility: parse CrewAI output into a questions list
 # ─────────────────────────────────────────────
 
+def _strip_markdown_fences(text: str) -> str:
+    """Remove ```json / ``` wrappers that LLMs often add around JSON output."""
+    text = text.strip()
+    # Remove opening fence (```json, ```JSON, ```, etc.)
+    text = re.sub(r"^```[a-zA-Z]*\s*", "", text)
+    # Remove closing fence
+    text = re.sub(r"\s*```$", "", text)
+    return text.strip()
+
+
+def _try_parse_json(raw: str):
+    """Try to parse raw string as JSON, stripping markdown fences first."""
+    try:
+        return json.loads(raw)
+    except Exception:
+        pass
+    try:
+        return json.loads(_strip_markdown_fences(raw))
+    except Exception:
+        pass
+    return raw  # return as-is; downstream will handle non-dict/list
+
+
 def _extract_questions(result) -> list:
     if hasattr(result, "raw") and result.raw:
-        try:
-            parsed = json.loads(result.raw)
-        except Exception:
-            parsed = result.raw
+        parsed = _try_parse_json(result.raw)
     elif hasattr(result, "output") and result.output:
         parsed = result.output
     else:
@@ -167,6 +207,41 @@ def _extract_questions(result) -> list:
         questions = []
 
     return questions
+
+
+# Image-trigger keywords used by both endpoints to auto-set requires_image when
+# the LLM omits the field.
+_IMAGE_KEYWORDS = frozenset([
+    "photo", "photograph", "picture", "image", "skin", "wound", "rash",
+    "lesion", "sore", "bruise", "swelling", "medication", "pill", "bottle",
+    "prescription", "insurance", "card", "scan", "show", "upload",
+])
+
+
+def _normalize_question(q: dict) -> dict:
+    """
+    Back-fill requires_image / image_prompt with safe defaults if the LLM
+    omitted them, and ensure every field defined in QuestionItem is present.
+    Also auto-detects image-relevant questions from keyword heuristics.
+    """
+    q.setdefault("id", "")
+    q.setdefault("question", "")
+    q.setdefault("type", "text")
+    q.setdefault("source", None)
+    q.setdefault("rationale", None)
+    q.setdefault("required", True)
+    q.setdefault("options", [])
+
+    text_lower = q["question"].lower()
+    auto_image = any(kw in text_lower for kw in _IMAGE_KEYWORDS)
+
+    if "requires_image" not in q:
+        q["requires_image"] = auto_image
+    if "image_prompt" not in q:
+        q["image_prompt"] = (
+            "Please take a clear photo and upload it." if q["requires_image"] else ""
+        )
+    return q
 
 
 # ─────────────────────────────────────────────
@@ -270,7 +345,10 @@ async def get_questionnaire(request: PatientRequest):
         Use the previous outputs.
         Generate 1-3 questions per problem.
         Output JSON with questionnaire containing questions array.
-        Each question should have: id, question, type, source, rationale
+        Each question MUST have these exact fields:
+          id, question, type, source, rationale,
+          requires_image (bool — true if a photo would aid assessment),
+          image_prompt (str — concise instruction for the photo if requires_image is true, else "")
         """,
         agent=question_agent,
         expected_output="JSON with questionnaire",
@@ -292,11 +370,12 @@ async def get_questionnaire(request: PatientRequest):
     ) as log_output:
         result = crew.kickoff(inputs={"patient_data": [patient_data]})
         try:
-            questions = _extract_questions(result)
+            questions = [_normalize_question(q) for q in _extract_questions(result)]
         except Exception as e:
             print(f"Error processing questionnaire: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
         log_output["question_count"] = len(questions)
+        log_output["requires_image_count"] = sum(1 for q in questions if q.get("requires_image"))
 
     return {"questions": questions, "patient_id": request.patient_id}
 
@@ -378,6 +457,10 @@ async def generate_dynamic_questionnaire(request: QuestionnaireGenerationRequest
 
         Use validated question formats when appropriate (e.g., PHQ-9 for depression, pain scales).
 
+        For questions where a photo would substantially aid clinical assessment (e.g., wounds,
+        skin conditions, medication bottles, insurance cards), set requires_image to true and
+        provide a concise image_prompt instructing the patient what photo to take.
+
         Output JSON with this EXACT structure:
         {{
             "questions": [
@@ -388,13 +471,15 @@ async def generate_dynamic_questionnaire(request: QuestionnaireGenerationRequest
                     "source": "Clinical reasoning or standard scale name",
                     "rationale": "Why this question is relevant",
                     "required": true,
-                    "options": ["option1", "option2"]
+                    "options": ["option1", "option2"],
+                    "requires_image": false,
+                    "image_prompt": ""
                 }}
             ]
         }}
         """,
         agent=question_agent,
-        expected_output="JSON with questions array",
+        expected_output="JSON with questions array including requires_image and image_prompt per question",
         context=[dedup_task, summarize_task],
     )
 
@@ -420,13 +505,15 @@ async def generate_dynamic_questionnaire(request: QuestionnaireGenerationRequest
         result = crew.kickoff(inputs={"patient_data": merged_data})
         print("CrewAI pipeline completed")
         try:
-            questions = _extract_questions(result)
+            questions = [_normalize_question(q) for q in _extract_questions(result)]
         except Exception as e:
             print(f"Error processing questionnaire: {str(e)}")
             import traceback
             traceback.print_exc()
             raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
         log_output["question_count"] = len(questions)
+        log_output["requires_image_count"] = sum(1 for q in questions if q.get("requires_image"))
+        log_output["questions_preview"] = [q.get("question", "")[:120] for q in questions]
 
     print(f"Generated {len(questions)} questions")
     return {
