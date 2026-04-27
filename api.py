@@ -3,6 +3,7 @@ import base64
 import json
 import os
 import re
+import uuid
 from typing import Any, Dict, List, Optional
 
 import uvicorn
@@ -208,24 +209,37 @@ _IMAGE_PROMPT_MAP = {
 
 
 def _normalize_question(q: dict) -> dict:
-    """Back-fill missing fields so the frontend always receives a complete object."""
-    q.setdefault("id", f"q{id(q)}")
+    """
+    Back-fill every field so the frontend always receives a complete object.
+
+    requires_image / image_prompt logic:
+      - If the LLM already set requires_image, that value is respected.
+      - If it was omitted, keyword heuristics infer the value.
+      - image_prompt is only derived from _IMAGE_PROMPT_MAP when requires_image
+        is True; an explicit requires_image: false is never overridden with a
+        photo prompt, even if the question text contains a trigger keyword.
+    """
+    q.setdefault("id", f"q_{uuid.uuid4().hex[:12]}")
+    q.setdefault("question", "")
     q.setdefault("type", "text")
+    q.setdefault("source", None)
+    q.setdefault("rationale", None)
     q.setdefault("required", True)
     q.setdefault("options", [])
-    q.setdefault("source", "")
-    q.setdefault("rationale", "")
 
-    question_lower = str(q.get("question", "")).lower()
+    question_lower = q["question"].lower()
 
     if "requires_image" not in q:
         q["requires_image"] = any(kw in question_lower for kw in _IMAGE_KEYWORDS)
 
     if "image_prompt" not in q or not q.get("image_prompt"):
-        match = next((kw for kw in _IMAGE_PROMPT_MAP if kw in question_lower), None)
-        q["image_prompt"] = _IMAGE_PROMPT_MAP[match] if match else (
-            "Please take a photo related to this question." if q["requires_image"] else ""
-        )
+        if q["requires_image"]:
+            match = next((kw for kw in _IMAGE_PROMPT_MAP if kw in question_lower), None)
+            q["image_prompt"] = _IMAGE_PROMPT_MAP[match] if match else (
+                "Please take a photo related to this question."
+            )
+        else:
+            q["image_prompt"] = ""
 
     return q
 
@@ -255,41 +269,6 @@ def _extract_questions(result) -> list:
         questions = []
 
     return [_normalize_question(q) for q in questions if isinstance(q, dict)]
-
-
-# Image-trigger keywords used by both endpoints to auto-set requires_image when
-# the LLM omits the field.
-_IMAGE_KEYWORDS = frozenset([
-    "photo", "photograph", "picture", "image", "skin", "wound", "rash",
-    "lesion", "sore", "bruise", "swelling", "medication", "pill", "bottle",
-    "prescription", "insurance", "card", "scan", "show", "upload",
-])
-
-
-def _normalize_question(q: dict) -> dict:
-    """
-    Back-fill requires_image / image_prompt with safe defaults if the LLM
-    omitted them, and ensure every field defined in QuestionItem is present.
-    Also auto-detects image-relevant questions from keyword heuristics.
-    """
-    q.setdefault("id", "")
-    q.setdefault("question", "")
-    q.setdefault("type", "text")
-    q.setdefault("source", None)
-    q.setdefault("rationale", None)
-    q.setdefault("required", True)
-    q.setdefault("options", [])
-
-    text_lower = q["question"].lower()
-    auto_image = any(kw in text_lower for kw in _IMAGE_KEYWORDS)
-
-    if "requires_image" not in q:
-        q["requires_image"] = auto_image
-    if "image_prompt" not in q:
-        q["image_prompt"] = (
-            "Please take a clear photo and upload it." if q["requires_image"] else ""
-        )
-    return q
 
 
 # ─────────────────────────────────────────────

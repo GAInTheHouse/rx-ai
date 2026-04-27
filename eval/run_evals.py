@@ -97,17 +97,27 @@ def _word_error_rate(reference: str, hypothesis: str) -> float:
     """
     Compute WER using jiwer if available, otherwise fall back to a simple
     token-level edit-distance implementation so the runner never crashes.
+
+    Empty-reference semantics:
+      - ref empty, hyp empty  → 0.0  (both silent, no error)
+      - ref empty, hyp non-empty → 1.0  (maximal error; avoids false perfect
+        scores when a golden transcript is accidentally blank)
+    Both jiwer and the fallback DP share this guard, applied before either
+    path is reached.
     """
+    ref_words = _normalise_text(reference).split()
+    hyp_words = _normalise_text(hypothesis).split()
+
+    # Guard must precede jiwer: jiwer.wer("", "words") returns 0.0, which
+    # would silently report a perfect score for a blank golden transcript.
+    if not ref_words:
+        return 0.0 if not hyp_words else 1.0
+
     try:
         import jiwer  # noqa: PLC0415
         return float(jiwer.wer(reference, hypothesis))
     except ImportError:
         pass
-
-    ref_words = _normalise_text(reference).split()
-    hyp_words = _normalise_text(hypothesis).split()
-    if not ref_words:
-        return 0.0 if not hyp_words else 1.0
 
     n, m = len(ref_words), len(hyp_words)
     dp = list(range(m + 1))

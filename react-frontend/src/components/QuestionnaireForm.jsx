@@ -22,8 +22,14 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode }) {
 
   // Voice state
   const [voiceStatus, setVoiceStatus] = useState('idle')
-  const [voiceError, setVoiceError] = useState(null)
+  // Keyed by question.id so each RecordButton shows only its own error,
+  // consistent with how capturedImages / imageDescriptions are scoped.
+  const [voiceErrors, setVoiceErrors] = useState({})
   const voiceControllerRef = useRef(null)
+  // Tracks which question's RecordButton most recently started recording.
+  // A ref (not state) so the onTranscript closure always sees the current
+  // value without needing to be recreated on every render.
+  const activeQuestionIdRef = useRef(null)
 
   // ── Response helpers ────────────────────────────────────────────────
 
@@ -185,11 +191,14 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode }) {
         <RecordButton
           mode="toggle"
           voiceControllerRef={voiceControllerRef}
-          onRecordStart={() => setVoiceError(null)}
+          onRecordStart={() => {
+            activeQuestionIdRef.current = question.id
+            setVoiceErrors((prev) => ({ ...prev, [question.id]: null }))
+          }}
           disabled={voiceStatus === 'speaking'}
         />
-        {voiceError && (
-          <p className="voice-error-msg">{voiceError}</p>
+        {voiceErrors[question.id] && (
+          <p className="voice-error-msg">{voiceErrors[question.id]}</p>
         )}
         <p className="voice-hint">
           Tap to record your answer, then tap again to stop.
@@ -328,11 +337,19 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode }) {
         <VoiceController
           ref={voiceControllerRef}
           onTranscript={(transcript) => {
-            // We don't know which question is active here; RecordButton
-            // individual wiring handles per-question transcript via handleVoiceTranscript
+            if (activeQuestionIdRef.current) {
+              handleVoiceTranscript(activeQuestionIdRef.current, transcript)
+            }
           }}
           onStatusChange={setVoiceStatus}
-          onError={(err) => setVoiceError(err.message)}
+          onError={(err) => {
+            if (activeQuestionIdRef.current) {
+              setVoiceErrors((prev) => ({
+                ...prev,
+                [activeQuestionIdRef.current]: err.message,
+              }))
+            }
+          }}
         />
       )}
 
