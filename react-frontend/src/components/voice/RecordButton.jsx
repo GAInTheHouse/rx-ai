@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react'
 import './RecordButton.css'
 
 /**
@@ -8,14 +8,19 @@ import './RecordButton.css'
  *   onRecordStart()    — optional; called when recording begins
  *   onRecordStop()     — optional; called when recording ends (before STT resolves)
  *   disabled           — bool
+ *
+ * Ref API (useImperativeHandle):
+ *   activate()   — programmatically start recording (used by QuestionnaireForm
+ *                  to auto-activate after TTS finishes)
+ *   deactivate() — programmatically stop recording (used by silence-timeout)
  */
-function RecordButton({
+const RecordButton = forwardRef(function RecordButton({
   mode = 'toggle',
   voiceControllerRef,
   onRecordStart,
   onRecordStop,
   disabled = false,
-}) {
+}, ref) {
   const [isRecording, setIsRecording] = useState(false)
 
   // Tracks whether a pointer-down initiated a hold session.
@@ -44,6 +49,21 @@ function RecordButton({
       // VoiceController already calls onError
     }
   }, [isRecording, voiceControllerRef, onRecordStop])
+
+  // ── Imperative handle for parent-driven activation ──────────────────────────
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      activate: () => {
+        if (!disabled && !isRecording) handleStart()
+      },
+      deactivate: () => {
+        if (isRecording) handleStop()
+      },
+    }),
+    [disabled, isRecording, handleStart, handleStop],
+  )
 
   // ── Toggle mode ──────────────────────────────────────────────────────────────
 
@@ -135,6 +155,6 @@ function RecordButton({
       </span>
     </button>
   )
-}
+})
 
 export default RecordButton

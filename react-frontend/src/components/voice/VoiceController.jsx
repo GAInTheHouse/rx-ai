@@ -11,15 +11,17 @@ const API_BASE = 'http://localhost:8000'
  *   onTranscript(transcript, confidence) — called after a successful /stt round-trip
  *   onStatusChange(status)               — 'idle' | 'speaking' | 'listening'
  *   onError(err)                         — called on any failure; status resets to 'idle'
+ *   silenceTimeoutMs                     — ms of recording before auto-stop (0 = disabled)
  *
  * Ref API (useImperativeHandle):
  *   speak(text)         → Promise<void>   — resolves when audio finishes playing
  *   startListening()    → Promise<void>   — acquires mic and starts recording
  *   stopListening()     → Promise<{ transcript, confidence }>
+ *   cancelListening()   → void            — stops mic without POSTing to /stt
  *   getStatus()         → string          — current status without a re-render
  */
 const VoiceController = forwardRef(function VoiceController(
-  { onTranscript, onStatusChange, onError },
+  { onTranscript, onStatusChange, onError, silenceTimeoutMs = 0 },
   ref,
 ) {
   const [status, setStatus] = useState('idle')
@@ -30,10 +32,16 @@ const VoiceController = forwardRef(function VoiceController(
   // without needing status in their dependency arrays.
   const statusRef = useRef('idle')
 
-  // Monotonically increasing token. Each speak() call claims a new token so
-  // that async continuations and onended handlers from superseded calls can
-  // detect they are stale and skip state updates.
+  // Monotonically increasing token — each speak() call claims a new token so
+  // that stale async continuations can detect they are superseded.
   const playbackTokenRef = useRef(0)
+
+  // Silence-timeout timer handle
+  const silenceTimerRef = useRef(null)
+
+  // Forward ref to stopListening so startListening can call it from the timer
+  // without creating a circular useCallback dependency.
+  const stopListeningRef = useRef(null)
 
   const updateStatus = useCallback(
     (next) => {
@@ -56,21 +64,12 @@ const VoiceController = forwardRef(function VoiceController(
    * Fetch /tts, decode the returned MP3 via AudioContext, and play it.
    * Cancels any audio that is currently playing before starting.
    * Resolves when playback ends naturally (or is superseded by a newer speak()).
-   *
-   * Race / clobber safety:
-   *  - The playback token is incremented BEFORE the old source is stopped, so
-   *    its onended handler sees a stale token and skips state updates.
-   *  - Token checks after each await point bail out if a newer speak() won.
    */
   const speak = useCallback(
     async (text) => {
-      // Claim a new token first — any prior speak()'s onended or async
-      // continuation will see playbackTokenRef.current !== their captured token
-      // and become no-ops.
       const token = ++playbackTokenRef.current
 
-      // Detach the old source's onended handler BEFORE stopping it so the
-      // handler cannot fire and clobber the new playback's state/refs.
+      // Detach old source's onended before stopping so it cannot clobber state.
       if (sourceNodeRef.current) {
         sourceNodeRef.current.onended = null
         try {
@@ -92,30 +91,24 @@ const VoiceController = forwardRef(function VoiceController(
 
         if (!res.ok) throw new Error(`TTS request failed (${res.status})`)
 
-        // A newer speak() may have started while this fetch was in flight
         if (playbackTokenRef.current !== token) return
 
-        // Response is raw audio/mpeg bytes — not JSON
         const arrayBuffer = await res.arrayBuffer()
         const audioCtx = getAudioContext()
 
-        // Browser autoplay policy may suspend the context; resume before decoding
         if (audioCtx.state === 'suspended') await audioCtx.resume()
 
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
 
-        // Check again after the potentially slow decode step
         if (playbackTokenRef.current !== token) return
 
         const source = audioCtx.createBufferSource()
         source.buffer = audioBuffer
         source.connect(audioCtx.destination)
-
         sourceNodeRef.current = source
 
         return new Promise((resolve) => {
           source.onended = () => {
-            // Only update shared state if we are still the active playback
             if (playbackTokenRef.current === token) {
               sourceNodeRef.current = null
               updateStatus('idle')
@@ -136,30 +129,19 @@ const VoiceController = forwardRef(function VoiceController(
   )
 
   /**
-   * Acquire the microphone and start buffering audio chunks.
-   * The RecordButton (or any parent) is responsible for calling stopListening().
-   */
-  const startListening = useCallback(async () => {
-    updateStatus('listening')
-    try {
-      await startRecording()
-    } catch (err) {
-      updateStatus('idle')
-      onError?.(err)
-      throw err
-    }
-  }, [updateStatus, onError])
-
-  /**
    * Stop the MediaRecorder, POST the blob to /stt, and return the transcript.
-   * Also calls the onTranscript prop so parents don't have to await the return value.
+   * Clears any active silence timer before proceeding.
    */
   const stopListening = useCallback(async () => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
+    }
+
     try {
       const blob = await stopRecording()
       updateStatus('idle')
 
-      // Field name must be 'audio' — matches FastAPI: audio: UploadFile = File(...)
       const filename = blob.type.includes('mp4') ? 'recording.m4a' : 'recording.webm'
       const formData = new FormData()
       formData.append('audio', blob, filename)
@@ -181,15 +163,63 @@ const VoiceController = forwardRef(function VoiceController(
     }
   }, [updateStatus, onTranscript, onError])
 
+  // Keep the ref current so the silence timer can call the latest version.
+  stopListeningRef.current = stopListening
+
+  /**
+   * Stop the active mic stream without sending audio to /stt.
+   * Used when navigating away from a question mid-recording.
+   */
+  const cancelListening = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
+    }
+    // stopRecording resolves a Blob; discard it
+    stopRecording().catch(() => {})
+    updateStatus('idle')
+  }, [updateStatus])
+
+  /**
+   * Acquire the microphone and start buffering audio chunks.
+   * If silenceTimeoutMs > 0, auto-calls stopListening() after that delay.
+   */
+  const startListening = useCallback(async () => {
+    updateStatus('listening')
+    try {
+      await startRecording()
+
+      if (silenceTimeoutMs > 0) {
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+        silenceTimerRef.current = setTimeout(() => {
+          silenceTimerRef.current = null
+          stopListeningRef.current?.()
+        }, silenceTimeoutMs)
+      }
+    } catch (err) {
+      updateStatus('idle')
+
+      // Translate the opaque NotAllowedError into something user-friendly.
+      const friendly =
+        err.name === 'NotAllowedError'
+          ? new Error('Microphone access was denied. Please allow microphone permissions and try again.')
+          : err
+
+      onError?.(friendly)
+      throw friendly
+    }
+  }, [updateStatus, onError, silenceTimeoutMs])
+
   useImperativeHandle(
     ref,
     () => ({
       speak,
       startListening,
       stopListening,
+      cancelListening,
       getStatus: () => statusRef.current,
     }),
-    [speak, startListening, stopListening],
+    [speak, startListening, stopListening, cancelListening],
   )
 
   return null

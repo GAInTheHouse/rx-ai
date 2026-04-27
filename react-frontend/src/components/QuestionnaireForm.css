@@ -237,6 +237,174 @@
   transform: translateY(0);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Voice Mode Additions
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Top-level voice-mode modifier */
+.qf--voice .questionnaire-header {
+  border-left-color: #6f42c1;
+}
+.qf--voice .questionnaire-header h1 { color: #6f42c1; }
+
+/* VoiceStatusBar row */
+.voice-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.voice-error-dismiss {
+  padding: 6px 14px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.voice-error-dismiss:hover { background: #c82333; }
+
+/* Step card */
+.voice-step-card {
+  border-left: 4px solid #6f42c1;
+  background: white;
+}
+
+.voice-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.voice-step-counter {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6f42c1;
+  background: #f3e8ff;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.voice-required-badge {
+  font-size: 12px;
+  background: #fff3cd;
+  color: #856404;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.voice-question-text {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a2e;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.voice-answer-area {
+  margin-bottom: 20px;
+}
+
+/* Recording controls row */
+.voice-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.voice-repeat-btn {
+  padding: 9px 18px;
+  background: white;
+  border: 2px solid #6f42c1;
+  color: #6f42c1;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.voice-repeat-btn:hover:not(:disabled) {
+  background: #6f42c1;
+  color: white;
+}
+.voice-repeat-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.voice-transcript-hint {
+  font-size: 12px;
+  color: #6c757d;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Navigation row */
+.voice-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 2px solid #e9ecef;
+  flex-wrap: wrap;
+}
+
+.voice-back-btn {
+  padding: 12px 24px;
+  background: white;
+  border: 2px solid #6c757d;
+  color: #6c757d;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.voice-back-btn:hover:not(:disabled) {
+  background: #6c757d;
+  color: white;
+}
+.voice-back-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.voice-next-btn {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #6f42c1 0%, #4a1d96 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 2px 8px rgba(111, 66, 193, 0.35);
+}
+.voice-next-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(111, 66, 193, 0.45);
+}
+.voice-next-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Responsive Design
+   ══════════════════════════════════════════════════════════════════════════ */
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .questionnaire-form-container {
@@ -263,6 +431,20 @@
   .cancel-button,
   .submit-button {
     width: 100%;
+  }
+
+  .voice-nav {
+    flex-direction: column-reverse;
+  }
+
+  .voice-back-btn,
+  .voice-next-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .voice-question-text {
+    font-size: 18px;
   }
 }
 

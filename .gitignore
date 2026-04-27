@@ -14,3 +14,6 @@ eval/logs/*.jsonl
 !package-lock.json
 !tsconfig*.json
 !vite.config.*
+
+#Files
+Big_Data_Adv_AI_Final_Project_Planning.pdf
