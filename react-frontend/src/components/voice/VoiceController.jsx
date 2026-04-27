@@ -131,12 +131,16 @@ const VoiceController = forwardRef(function VoiceController(
   /**
    * Stop the MediaRecorder, POST the blob to /stt, and return the transcript.
    * Clears any active silence timer before proceeding.
+   * Idempotent: returns immediately if not currently in the 'listening' state,
+   * so the silence-timer path and the RecordButton path cannot double-execute.
    */
   const stopListening = useCallback(async () => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current)
       silenceTimerRef.current = null
     }
+
+    if (statusRef.current !== 'listening') return
 
     try {
       const blob = await stopRecording()
@@ -193,7 +197,9 @@ const VoiceController = forwardRef(function VoiceController(
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
         silenceTimerRef.current = setTimeout(() => {
           silenceTimerRef.current = null
-          stopListeningRef.current?.()
+          // Errors are already forwarded to onError inside stopListening;
+          // catch here only to prevent an unhandled-rejection on auto-stop.
+          stopListeningRef.current?.().catch(() => {})
         }, silenceTimeoutMs)
       }
     } catch (err) {

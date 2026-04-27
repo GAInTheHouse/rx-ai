@@ -8,6 +8,8 @@ import './RecordButton.css'
  *   onRecordStart()    — optional; called when recording begins
  *   onRecordStop()     — optional; called when recording ends (before STT resolves)
  *   disabled           — bool
+ *   ariaLabel          — optional override for the button's aria-label; when
+ *                        omitted the component uses its own state-driven defaults
  *
  * Ref API (useImperativeHandle):
  *   activate()   — programmatically start recording (used by QuestionnaireForm
@@ -20,6 +22,7 @@ const RecordButton = forwardRef(function RecordButton({
   onRecordStart,
   onRecordStop,
   disabled = false,
+  ariaLabel,
 }, ref) {
   const [isRecording, setIsRecording] = useState(false)
 
@@ -124,7 +127,7 @@ const RecordButton = forwardRef(function RecordButton({
         onPointerLeave={handlePointerLeave}
         onPointerCancel={handlePointerCancel}
         disabled={disabled}
-        aria-label={isRecording ? 'Recording — release to stop' : 'Hold to record'}
+        aria-label={ariaLabel ?? (isRecording ? 'Recording — release to stop' : 'Hold to record')}
         aria-pressed={isRecording}
         type="button"
       >
@@ -143,7 +146,7 @@ const RecordButton = forwardRef(function RecordButton({
       className={`record-button record-button--toggle${isRecording ? ' record-button--active' : ''}`}
       onClick={handleToggleClick}
       disabled={disabled}
-      aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+      aria-label={ariaLabel ?? (isRecording ? 'Stop recording' : 'Start recording')}
       aria-pressed={isRecording}
       type="button"
     >

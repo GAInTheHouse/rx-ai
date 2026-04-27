@@ -54,6 +54,9 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
       ? [...currentValues, option]
       : currentValues.filter((v) => v !== option)
     setResponses((prev) => ({ ...prev, [questionId]: newValues }))
+    if (errors[questionId]) {
+      setErrors((prev) => ({ ...prev, [questionId]: null }))
+    }
   }
 
   const validateForm = () => {
@@ -124,6 +127,13 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
       }, TTS_TO_MIC_DELAY_MS)
     }
 
+    // Silence timer auto-stopped the mic → sync RecordButton's local isRecording.
+    // deactivate() resets its UI and calls stopListening(), which returns early
+    // via the idempotent guard since status is already 'idle' at this point.
+    if (prev === 'listening' && newStatus === 'idle') {
+      recordButtonRef.current?.deactivate()
+    }
+
     // Recording started → begin countdown display
     if (newStatus === 'listening') {
       let secs = Math.round(SILENCE_TIMEOUT_MS / 1000)
@@ -158,9 +168,10 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
     const q = questions[currentStep]
     if (!q) return
 
-    // For text / multiline questions, auto-fill with the transcript.
-    // Other types keep their existing input controls but also update the field
-    // so the patient can review and correct.
+    // Auto-fill free-text answers from the transcript.
+    // For select / checkbox / scale questions the patient must use the input
+    // controls directly — mapping raw speech to a discrete option reliably
+    // would require fuzzy matching or a dedicated NLU step.
     if (q.type === 'text' || q.type === 'multiline') {
       setResponses((prev) => ({ ...prev, [q.id]: transcript }))
     }
@@ -327,7 +338,7 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
             <div className="progress-bar">
               <div
                 className="progress-fill"
-                style={{ width: `${(answeredCount / questions.length) * 100}%` }}
+                style={{ width: `${questions.length > 0 ? (answeredCount / questions.length) * 100 : 0}%` }}
               />
             </div>
           </div>
@@ -375,7 +386,7 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
     currentAnswer !== null &&
     (Array.isArray(currentAnswer) ? currentAnswer.length > 0 : currentAnswer.toString().trim() !== '')
 
-  const progressPct = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0
+  const progressPct = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 0
 
   return (
     <div className="questionnaire-form-container qf--voice">
@@ -449,7 +460,7 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
               mode="toggle"
               voiceControllerRef={voiceControllerRef}
               disabled={voiceStatus === 'speaking'}
-              aria-label={
+              ariaLabel={
                 voiceStatus === 'listening'
                   ? 'Stop recording and transcribe'
                   : 'Start recording your answer'
@@ -509,7 +520,11 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
             type="button"
             className="voice-next-btn"
             onClick={() => goToStep(currentStep + 1)}
-            disabled={voiceStatus === 'speaking' || voiceStatus === 'listening'}
+            disabled={
+              voiceStatus === 'speaking' ||
+              voiceStatus === 'listening' ||
+              (currentQuestion?.required && !hasCurrentAnswer)
+            }
           >
             Next →
           </button>
@@ -518,7 +533,11 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
             type="button"
             className="submit-button"
             onClick={handleSubmit}
-            disabled={voiceStatus === 'speaking' || voiceStatus === 'listening'}
+            disabled={
+              voiceStatus === 'speaking' ||
+              voiceStatus === 'listening' ||
+              (currentQuestion?.required && !hasCurrentAnswer)
+            }
           >
             Submit Questionnaire
           </button>
