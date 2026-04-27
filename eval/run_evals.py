@@ -251,32 +251,6 @@ _CLINICAL_KEYWORDS = {
     "image", "exercise", "diet", "alcohol", "smoke", "insulin", "side effect",
 }
 
-REQUIRED_QUESTION_FIELDS = {"id", "question", "type", "requires_image", "image_prompt"}
-
-
-def _check_question_structure(questions: list[dict]) -> dict:
-    """Return structural validation results for a list of questions."""
-    missing_fields_count = 0
-    missing_requires_image = 0
-    missing_image_prompt_when_required = 0
-    total = len(questions)
-
-    for q in questions:
-        missing = REQUIRED_QUESTION_FIELDS - set(q.keys())
-        if missing:
-            missing_fields_count += 1
-        if "requires_image" not in q:
-            missing_requires_image += 1
-        if q.get("requires_image") and not q.get("image_prompt"):
-            missing_image_prompt_when_required += 1
-
-    return {
-        "total_questions": total,
-        "missing_required_fields_count": missing_fields_count,
-        "missing_requires_image_count": missing_requires_image,
-        "missing_image_prompt_when_required_count": missing_image_prompt_when_required,
-    }
-
 
 def _keyword_relevance_score(question_text: str) -> float:
     """Simple keyword overlap score against clinical vocabulary (0.0 – 1.0)."""
@@ -326,11 +300,13 @@ def evaluate_qgen(entries: list[dict]) -> dict:
             "structure_ok": structure_ok,
         })
 
-        # Relevance: use patient conditions from input as ground truth
-        conditions = e.get("input", {}).get("conditions", [])
-        if conditions and q_count > 0:
-            condition_text = " ".join(conditions)
-            relevance_scores.append(_keyword_relevance_score(condition_text))
+        # Relevance: score clinical keyword coverage against the generated
+        # question text (questions_preview).  Old logs that pre-date this field
+        # are skipped rather than silently scoring the input conditions.
+        questions_preview = output.get("questions_preview", [])
+        if questions_preview:
+            combined = " ".join(questions_preview)
+            relevance_scores.append(_keyword_relevance_score(combined))
 
     failure_modes = []
     zero_q = [r for r in all_structure_results if r["question_count"] == 0]
@@ -360,7 +336,9 @@ def evaluate_qgen(entries: list[dict]) -> dict:
         "relevance": {
             "avg_keyword_score": avg_relevance,
             "note": (
-                "Keyword relevance measures clinical vocabulary coverage. "
+                "Keyword relevance measures clinical vocabulary coverage of the "
+                "generated question text (questions_preview). Entries logged "
+                "before questions_preview was added are excluded from this metric. "
                 "Run with --deepeval for LLM-judged relevance metrics."
             ),
         },
@@ -458,7 +436,17 @@ def generate_sample_logs(log_dir: Path) -> Path:
             "model": "gemini-2.5-flash",
             "input": {"patient_id": "P001", "visit_id": "V003",
                       "conditions": ["Type 2 Diabetes Mellitus", "Hypertension"], "endpoint": "generate-questionnaire"},
-            "output": {"question_count": 6, "requires_image_count": 1},
+            "output": {
+                "question_count": 6, "requires_image_count": 1,
+                "questions_preview": [
+                    "How would you rate your blood sugar control over the past week?",
+                    "Have you been taking your insulin or diabetes medication as prescribed?",
+                    "Have you experienced any dizziness or fatigue recently?",
+                    "How has your blood pressure been? Have you checked it at home?",
+                    "Have you noticed any swelling in your legs or feet?",
+                    "Can you take a photo of any skin changes or wounds on your feet?",
+                ],
+            },
             "latency_ms": 11240, "timestamp": f"{today}T09:55:00+00:00",
             "patient_id": "P001", "question_id": None, "error": None,
         },
@@ -468,7 +456,7 @@ def generate_sample_logs(log_dir: Path) -> Path:
             "model": "gemini-2.5-flash",
             "input": {"patient_id": "P002", "visit_id": "V001",
                       "conditions": ["COPD"], "endpoint": "generate-questionnaire"},
-            "output": {"question_count": 0, "requires_image_count": 0},
+            "output": {"question_count": 0, "requires_image_count": 0, "questions_preview": []},
             "latency_ms": 9800, "timestamp": f"{today}T10:12:00+00:00",
             "patient_id": "P002", "question_id": None, "error": None,
         },
@@ -478,7 +466,16 @@ def generate_sample_logs(log_dir: Path) -> Path:
             "model": "gemini-2.5-flash",
             "input": {"patient_id": "P004", "visit_id": "V002",
                       "conditions": ["Post-operative wound", "Type 2 Diabetes Mellitus"], "endpoint": "generate-questionnaire"},
-            "output": {"question_count": 5, "requires_image_count": 2},
+            "output": {
+                "question_count": 5, "requires_image_count": 2,
+                "questions_preview": [
+                    "How is your wound healing? Is there any pain, redness, or discharge?",
+                    "Can you take a photo of the wound site so we can assess it visually?",
+                    "Are you managing your blood glucose levels? What were your recent readings?",
+                    "Have you noticed any signs of infection such as increased swelling or fever?",
+                    "Can you photograph the wound dressing to confirm it is intact?",
+                ],
+            },
             "latency_ms": 13100, "timestamp": f"{today}T10:15:30+00:00",
             "patient_id": "P004", "question_id": None, "error": None,
         },
@@ -597,11 +594,13 @@ def main() -> None:
     log_path = Path(args.log_dir)
     output_path = Path(args.output)
 
-    # Optionally seed with sample data
+    # Optionally seed with sample data — write into the resolved log directory
+    # so generated samples are always picked up by the subsequent load_logs call.
     if args.generate_samples:
-        generate_sample_logs(_DEFAULT_LOG_DIR)
-        if not log_path.exists():
-            log_path = _DEFAULT_LOG_DIR
+        sample_dir = log_path.parent if log_path.suffix == ".jsonl" else log_path
+        generate_sample_logs(sample_dir)
+        if log_path.suffix == ".jsonl":
+            log_path = sample_dir
 
     # Load golden dataset for STT WER
     golden_path = _DATASETS_DIR / "stt_golden.json"

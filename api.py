@@ -513,6 +513,7 @@ async def generate_dynamic_questionnaire(request: QuestionnaireGenerationRequest
             raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
         log_output["question_count"] = len(questions)
         log_output["requires_image_count"] = sum(1 for q in questions if q.get("requires_image"))
+        log_output["questions_preview"] = [q.get("question", "")[:120] for q in questions]
 
     print(f"Generated {len(questions)} questions")
     return {

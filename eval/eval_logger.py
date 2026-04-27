@@ -83,7 +83,8 @@ def _get_bq_client():
         try:
             from google.cloud import bigquery  # noqa: PLC0415
             _bq_client = bigquery.Client(project=_BQ_PROJECT)
-            _bq_table_ref = f"{_BQ_PROJECT}.{_BQ_DATASET}.{_BQ_TABLE}"
+            resolved_project = _bq_client.project
+            _bq_table_ref = f"{resolved_project}.{_BQ_DATASET}.{_BQ_TABLE}"
             print(
                 f"[eval_logger] BigQuery streaming enabled → {_bq_table_ref}"
             )
@@ -188,6 +189,8 @@ async def log_ai_call(
         except Exception as log_exc:
             print(f"[eval_logger] Failed to write JSONL log entry: {log_exc}")
 
-        # 2 — BigQuery (when configured)
+        # 2 — BigQuery (when configured) — scheduled as a background task so
+        # it never adds insert latency to the API response.  _stream_to_bigquery
+        # swallows all exceptions internally, so fire-and-forget is safe.
         if _BQ_DATASET:
-            await _stream_to_bigquery(entry)
+            asyncio.create_task(_stream_to_bigquery(entry))

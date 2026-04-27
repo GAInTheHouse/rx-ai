@@ -1,0 +1,106 @@
+{
+  "dataset_version": "1.0",
+  "description": "Image analysis golden dataset — 10 labeled sample images with reference descriptions for wound, medication bottle, and insurance card scenarios. Sample image files live in eval/datasets/images/. Reference descriptions are human-authored ground-truth labels.",
+  "evaluation_config": {
+    "geval_pass_threshold": 0.70,
+    "judge_model": "gemini-2.5-flash",
+    "scoring_criteria": [
+      "Clinical accuracy: does the description correctly identify the visible finding?",
+      "Completeness: are all clinically relevant visible features mentioned?",
+      "Conciseness: is the description 2-4 sentences without unnecessary speculation?",
+      "No hallucination: does the description avoid stating things not visible in the image?"
+    ]
+  },
+  "samples": [
+    {
+      "id": "img_001",
+      "image_file": "eval/datasets/images/img_001.jpg",
+      "category": "wound",
+      "question": "Do you have any wounds or injuries you would like to show your provider?",
+      "reference_description": "A superficial abrasion approximately 3 cm in length is visible on the lower forearm. The wound edges are irregular with mild surrounding erythema. No signs of active bleeding or purulent discharge are present.",
+      "key_features": ["abrasion", "erythema", "no active bleeding", "no pus"],
+      "severity": "mild"
+    },
+    {
+      "id": "img_002",
+      "image_file": "eval/datasets/images/img_002.jpg",
+      "category": "wound",
+      "question": "Please take a photo of the wound on your leg.",
+      "reference_description": "A sutured laceration approximately 4 cm long is visible on the anterior lower leg. The sutures appear intact with mild perilesional swelling and early bruising. No dehiscence or exudate is observed.",
+      "key_features": ["laceration", "sutures intact", "swelling", "bruising", "no dehiscence"],
+      "severity": "moderate"
+    },
+    {
+      "id": "img_003",
+      "image_file": "eval/datasets/images/img_003.jpg",
+      "category": "rash",
+      "question": "Can you show us the rash you mentioned?",
+      "reference_description": "An erythematous maculopapular rash covers the dorsum of the left hand and extends to the wrist. The lesions are confluent, slightly raised, and non-vesicular. No crusting or scaling is visible in this image.",
+      "key_features": ["maculopapular", "erythematous", "confluent", "non-vesicular", "no crusting"],
+      "severity": "moderate"
+    },
+    {
+      "id": "img_004",
+      "image_file": "eval/datasets/images/img_004.jpg",
+      "category": "rash",
+      "question": "Please take a photo of the area of redness on your skin.",
+      "reference_description": "A well-demarcated area of erythema and mild swelling is visible on the right forearm, approximately 5 cm in diameter. The center appears slightly darker, consistent with early induration. No blistering or open skin breakdown is present.",
+      "key_features": ["erythema", "swelling", "induration", "no blistering", "well-demarcated"],
+      "severity": "moderate"
+    },
+    {
+      "id": "img_005",
+      "image_file": "eval/datasets/images/img_005.jpg",
+      "category": "medication_bottle",
+      "question": "Please take a photo of your medication bottle.",
+      "reference_description": "A prescription medication bottle is visible with a pharmacy label showing the drug name Metformin 500 mg, patient name partially visible, and dosing instructions of twice daily with meals. The fill level appears approximately half full.",
+      "key_features": ["medication name visible", "dosage legible", "dosing schedule", "fill level"],
+      "severity": "informational"
+    },
+    {
+      "id": "img_006",
+      "image_file": "eval/datasets/images/img_006.jpg",
+      "category": "medication_bottle",
+      "question": "Can you show me the pill bottle for the medication you are asking about?",
+      "reference_description": "A white prescription bottle is shown with a label indicating Lisinopril 10 mg tablets, with a refill count of two remaining. The cap appears properly sealed. The expiration date is partially visible but appears to be within the current year.",
+      "key_features": ["medication name", "dosage", "refills remaining", "proper seal", "expiration"],
+      "severity": "informational"
+    },
+    {
+      "id": "img_007",
+      "image_file": "eval/datasets/images/img_007.jpg",
+      "category": "insurance_card",
+      "question": "Please take a clear photo of your insurance card.",
+      "reference_description": "An insurance card is displayed showing the insurer name, member ID number, group number, and plan name. The card appears current with a visible effective date. The member name is legible on the front of the card.",
+      "key_features": ["insurer name", "member ID", "group number", "plan name", "effective date"],
+      "severity": "informational"
+    },
+    {
+      "id": "img_008",
+      "image_file": "eval/datasets/images/img_008.jpg",
+      "category": "wound",
+      "question": "You mentioned a wound on your foot — can you photograph it?",
+      "reference_description": "A shallow ulceration approximately 2 cm in diameter is present on the plantar aspect of the right foot near the first metatarsal head. The wound bed appears pink with granulation tissue. Surrounding skin shows mild callus formation with no visible tracking or tunneling.",
+      "key_features": ["ulceration", "plantar location", "granulation tissue", "callus", "no tunneling"],
+      "severity": "moderate"
+    },
+    {
+      "id": "img_009",
+      "image_file": "eval/datasets/images/img_009.jpg",
+      "category": "swelling",
+      "question": "Can you take a photo of the swelling in your ankle?",
+      "reference_description": "Bilateral pitting edema is visible at the level of both ankles, more pronounced on the left side. The overlying skin appears taut and shiny without skin breakdown or discoloration. No open wounds or varicosities are visible in this image.",
+      "key_features": ["bilateral edema", "pitting", "taut skin", "no skin breakdown", "no open wounds"],
+      "severity": "moderate"
+    },
+    {
+      "id": "img_010",
+      "image_file": "eval/datasets/images/img_010.jpg",
+      "category": "bruise",
+      "question": "You mentioned a bruise — please photograph it so the provider can assess it.",
+      "reference_description": "A large ecchymosis approximately 8 cm by 5 cm is visible on the lateral thigh. The bruise displays a yellow-green periphery and darker central purple coloration consistent with 5-7 days of age. No open skin injury or swelling is visible at this site.",
+      "key_features": ["ecchymosis", "size estimate", "color staging", "age estimation", "no open injury"],
+      "severity": "mild"
+    }
+  ]
+}
