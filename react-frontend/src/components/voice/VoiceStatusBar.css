@@ -1,0 +1,119 @@
+/* ── Container ─────────────────────────────────────────────────────────── */
+.vsb {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  background: #f8f9fa;
+  border: 1.5px solid #dee2e6;
+  transition: background 0.25s ease, border-color 0.25s ease;
+  min-width: 170px;
+}
+
+.vsb--speaking {
+  background: #e8f4fd;
+  border-color: #007bff;
+}
+
+.vsb--listening {
+  background: #fff0f0;
+  border-color: #ef4444;
+}
+
+/* ── Inner row ──────────────────────────────────────────────────────────── */
+.vsb__inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vsb__label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #495057;
+  white-space: nowrap;
+}
+
+.vsb--speaking .vsb__label { color: #0056b3; }
+.vsb--listening .vsb__label { color: #b91c1c; }
+
+/* ── Waveform (speaking) ────────────────────────────────────────────────── */
+.vsb-waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+}
+
+.vsb-waveform__bar {
+  display: block;
+  width: 4px;
+  border-radius: 2px;
+  background: #007bff;
+  animation: vsb-wave 1s ease-in-out infinite;
+}
+
+.vsb-waveform__bar--1 { animation-delay: 0.00s; height: 6px;  }
+.vsb-waveform__bar--2 { animation-delay: 0.12s; height: 14px; }
+.vsb-waveform__bar--3 { animation-delay: 0.24s; height: 22px; }
+.vsb-waveform__bar--4 { animation-delay: 0.12s; height: 14px; }
+.vsb-waveform__bar--5 { animation-delay: 0.00s; height: 6px;  }
+
+@keyframes vsb-wave {
+  0%, 100% { transform: scaleY(0.35); }
+  50%       { transform: scaleY(1);   }
+}
+
+/* ── Pulsing mic ring (listening) ───────────────────────────────────────── */
+.vsb-ring {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vsb-ring__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.25);
+  animation: vsb-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes vsb-pulse {
+  0%   { transform: scale(0.8); opacity: 0.85; }
+  50%  { transform: scale(1.4); opacity: 0.15; }
+  100% { transform: scale(0.8); opacity: 0.85; }
+}
+
+.vsb-ring__icon {
+  position: relative;
+  font-size: 13px;
+  z-index: 1;
+  line-height: 1;
+}
+
+/* ── Idle dot ───────────────────────────────────────────────────────────── */
+.vsb-idle {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #adb5bd;
+  flex-shrink: 0;
+}
+
+/* ── Error message ──────────────────────────────────────────────────────── */
+.vsb__error {
+  font-size: 0.78rem;
+  color: #dc3545;
+  margin: 0;
+  text-align: center;
+  max-width: 280px;
+  line-height: 1.4;
+}

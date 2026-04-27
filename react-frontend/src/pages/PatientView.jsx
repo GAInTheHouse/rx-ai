@@ -9,13 +9,18 @@ function PatientView() {
   const [pendingQuestionnaires, setPendingQuestionnaires] = useState([])
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null)
   const [loading, setLoading] = useState(true)
+  // Persisted in localStorage so the preference survives a page refresh
+  const [voiceMode, setVoiceMode] = useState(() => {
+    try {
+      return localStorage.getItem('rxai_voice_mode') === 'true'
+    } catch {
+      return false
+    }
+  })
 
   useEffect(() => {
     loadPendingQuestionnaires()
-    
-    // Poll for new questionnaires every 3 seconds (simulate real-time)
     const interval = setInterval(loadPendingQuestionnaires, 3000)
-    
     return () => clearInterval(interval)
   }, [patientId])
 
@@ -34,7 +39,7 @@ function PatientView() {
     QuestionnaireManager.submitResponses(questionnaireId, responses, formattedResponses)
     setSelectedQuestionnaire(null)
     loadPendingQuestionnaires()
-    alert('✅ Questionnaire submitted successfully! Your responses have been sent to your provider.')
+    alert('Your responses have been submitted successfully.')
   }
 
   const handleCancelQuestionnaire = () => {
@@ -44,10 +49,20 @@ function PatientView() {
     setSelectedQuestionnaire(null)
   }
 
+  const toggleVoiceMode = () => {
+    const next = !voiceMode
+    setVoiceMode(next)
+    try {
+      localStorage.setItem('rxai_voice_mode', String(next))
+    } catch {
+      // localStorage unavailable — no-op
+    }
+  }
+
   if (loading) {
     return (
       <div className="patient-view-container">
-        <h2>Loading...</h2>
+        <h2>Loading…</h2>
       </div>
     )
   }
@@ -56,6 +71,7 @@ function PatientView() {
     return (
       <QuestionnaireForm
         questionnaire={selectedQuestionnaire}
+        voiceMode={voiceMode}
         onSubmit={handleSubmitQuestionnaire}
         onCancel={handleCancelQuestionnaire}
       />
@@ -69,20 +85,46 @@ function PatientView() {
         <p className="patient-id">Patient ID: {patientId}</p>
       </div>
 
+      {/* Voice mode toggle */}
+      <div className="voice-mode-toggle-row">
+        <div className="voice-mode-toggle-card">
+          <div className="voice-mode-toggle-info">
+            <span className="voice-mode-icon">{voiceMode ? '🎤' : '⌨️'}</span>
+            <div>
+              <strong>{voiceMode ? 'Voice Mode — On' : 'Text Mode'}</strong>
+              <p>
+                {voiceMode
+                  ? 'Questions will be read aloud and your spoken answers will be transcribed.'
+                  : 'Use the keyboard to type your answers.'}
+              </p>
+            </div>
+          </div>
+          <button
+            className={`voice-toggle-btn ${voiceMode ? 'voice-toggle-btn--on' : ''}`}
+            onClick={toggleVoiceMode}
+            aria-pressed={voiceMode}
+            aria-label={voiceMode ? 'Switch to text mode' : 'Switch to voice mode'}
+            type="button"
+          >
+            {voiceMode ? 'Switch to Text' : 'Enable Voice'}
+          </button>
+        </div>
+      </div>
+
       <div className="questionnaires-section">
         <h2>Available Questionnaires</h2>
-        
+
         {pendingQuestionnaires.length === 0 ? (
           <div className="no-questionnaires">
             <div className="empty-state">
               <span className="empty-icon">📋</span>
               <h3>No Questionnaires Available</h3>
-              <p>Your doctor hasn't released any questionnaires yet. Please check back later.</p>
+              <p>Your doctor hasn&apos;t released any questionnaires yet. Please check back later.</p>
             </div>
           </div>
         ) : (
           <div className="questionnaire-cards">
-            {pendingQuestionnaires.map(questionnaire => (
+            {pendingQuestionnaires.map((questionnaire) => (
               <div key={questionnaire.id} className="questionnaire-card">
                 <div className="card-header">
                   <h3>New Questionnaire</h3>
@@ -95,16 +137,14 @@ function PatientView() {
                   <p className="question-count">
                     {questionnaire.questions.length} questions to answer
                   </p>
-                  <p className="visit-info">
-                    Visit: {questionnaire.visitId}
-                  </p>
+                  <p className="visit-info">Visit: {questionnaire.visitId}</p>
                 </div>
                 <div className="card-footer">
                   <button
                     onClick={() => handleStartQuestionnaire(questionnaire)}
                     className="start-button"
                   >
-                    Start Questionnaire →
+                    {voiceMode ? '🎤 Start with Voice →' : 'Start Questionnaire →'}
                   </button>
                 </div>
               </div>
@@ -116,9 +156,9 @@ function PatientView() {
       <div className="patient-info-box">
         <h3>ℹ️ Information</h3>
         <p>
-          Your healthcare provider may release questionnaires to gather information about your symptoms, 
-          medication compliance, and overall health status. Please complete them as soon as possible to 
-          help your provider give you the best care.
+          Your healthcare provider may release questionnaires to gather information about your
+          symptoms, medication compliance, and overall health status. Please complete them as soon
+          as possible to help your provider give you the best care.
         </p>
       </div>
     </div>
@@ -126,4 +166,3 @@ function PatientView() {
 }
 
 export default PatientView
-
