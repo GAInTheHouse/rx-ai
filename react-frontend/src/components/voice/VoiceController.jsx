@@ -158,7 +158,21 @@ const VoiceController = forwardRef(function VoiceController(
         body: formData,
       })
 
-      if (!res.ok) throw new Error(`STT request failed (${res.status})`)
+      if (!res.ok) {
+        let detail = ''
+        try {
+          const errJson = await res.json()
+          detail = errJson?.detail ? String(errJson.detail) : JSON.stringify(errJson)
+        } catch {
+          try {
+            detail = await res.text()
+          } catch {
+            detail = ''
+          }
+        }
+        const suffix = detail ? `: ${detail}` : ''
+        throw new Error(`STT request failed (${res.status})${suffix}`)
+      }
 
       const data = await res.json()
       const { transcript, confidence, needs_rerecord, message, confidence_threshold } = data

@@ -36,6 +36,9 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _REPORTS_DIR = Path(__file__).resolve().parent / "reports"
 _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
+# Keep in sync with the backend default for low-confidence STT.
+_STT_CONFIDENCE_THRESHOLD = float(os.getenv("STT_CONFIDENCE_THRESHOLD", "0.7"))
+
 
 def _default_log_dir() -> Path:
     env_log_dir = os.getenv("EVAL_LOG_DIR", "").strip()
@@ -198,7 +201,7 @@ def endpoint_hardening_checks(entries: list[dict]) -> dict[str, Any]:
         if transcript and conf is not None:
             stt_total_ok += 1
             try:
-                if float(conf) < 0.7:
+                if float(conf) < _STT_CONFIDENCE_THRESHOLD:
                     stt_low_conf += 1
             except Exception:
                 pass
@@ -209,6 +212,7 @@ def endpoint_hardening_checks(entries: list[dict]) -> dict[str, Any]:
             "error_count": sum(1 for e in stt if e.get("error")),
             "low_confidence_count": stt_low_conf,
             "low_confidence_rate": round(stt_low_conf / max(stt_total_ok, 1), 3),
+            "threshold": _STT_CONFIDENCE_THRESHOLD,
             "note": "low_confidence_rate computed over successful STT calls with non-empty transcripts",
         },
         "tts": {

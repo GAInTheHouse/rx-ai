@@ -15,6 +15,7 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from google.api_core.client_options import ClientOptions
+from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import texttospeech
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
@@ -730,14 +731,14 @@ async def text_to_speech(request: TTSRequest, http_request: Request):
     ) as log_output:
         try:
             client = _get_tts_client()
-        except Exception as exc:
+        except DefaultCredentialsError:
             raise HTTPException(
                 status_code=503,
-                detail=(
-                    "Google Cloud credentials not configured for TTS. "
-                    f"Set GOOGLE_APPLICATION_CREDENTIALS. ({exc})"
-                ),
+                detail="Google Cloud credentials not available for TTS. Set GOOGLE_APPLICATION_CREDENTIALS.",
             )
+        except Exception as exc:
+            print(f"[tts] client init failed: {exc!r}")
+            raise HTTPException(status_code=503, detail="TTS service unavailable.")
         synthesis_input = texttospeech.SynthesisInput(text=request.text)
         voice_params = texttospeech.VoiceSelectionParams(
             language_code="en-US",
@@ -767,7 +768,8 @@ async def speech_to_text(http_request: Request, audio: UploadFile = File(...)):
     """
     Transcribe patient speech to text.
     Accepts audio/webm;codecs=opus (from browser MediaRecorder) or audio/mp4.
-    Returns { transcript, confidence }.
+    Returns:
+      { transcript, confidence, needs_rerecord, confidence_threshold, message }.
     """
     audio_bytes = await audio.read()
     if len(audio_bytes) < _STT_MIN_AUDIO_BYTES:
@@ -788,14 +790,14 @@ async def speech_to_text(http_request: Request, audio: UploadFile = File(...)):
     ) as log_output:
         try:
             client = _get_stt_client()
-        except Exception as exc:
+        except DefaultCredentialsError:
             raise HTTPException(
                 status_code=503,
-                detail=(
-                    "Google Cloud credentials not configured for STT. "
-                    f"Set GOOGLE_APPLICATION_CREDENTIALS. ({exc})"
-                ),
+                detail="Google Cloud credentials not available for STT. Set GOOGLE_APPLICATION_CREDENTIALS.",
             )
+        except Exception as exc:
+            print(f"[stt] client init failed: {exc!r}")
+            raise HTTPException(status_code=503, detail="STT service unavailable.")
         config = cloud_speech.RecognitionConfig(
             auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
             language_codes=["en-US"],
