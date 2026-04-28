@@ -21,7 +21,7 @@ const API_BASE = 'http://localhost:8000'
  *   getStatus()         → string          — current status without a re-render
  */
 const VoiceController = forwardRef(function VoiceController(
-  { onTranscript, onStatusChange, onError, silenceTimeoutMs = 0 },
+  { onTranscript, onStatusChange, onError, silenceTimeoutMs = 0, workflowId = null },
   ref,
 ) {
   const [status, setStatus] = useState('idle')
@@ -83,9 +83,11 @@ const VoiceController = forwardRef(function VoiceController(
       updateStatus('speaking')
 
       try {
+        const headers = { 'Content-Type': 'application/json' }
+        if (workflowId) headers['X-RxAI-Workflow-Id'] = workflowId
         const res = await fetch(`${API_BASE}/tts`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ text }),
         })
 
@@ -152,6 +154,7 @@ const VoiceController = forwardRef(function VoiceController(
 
       const res = await fetch(`${API_BASE}/stt`, {
         method: 'POST',
+        headers: workflowId ? { 'X-RxAI-Workflow-Id': workflowId } : undefined,
         body: formData,
       })
 
@@ -166,7 +169,7 @@ const VoiceController = forwardRef(function VoiceController(
       onError?.(err)
       throw err
     }
-  }, [updateStatus, onTranscript, onError])
+  }, [updateStatus, onTranscript, onError, workflowId])
 
   // Keep the ref current so the silence timer can call the latest version.
   stopListeningRef.current = stopListening

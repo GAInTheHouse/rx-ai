@@ -14,6 +14,7 @@ from eval.eval_logger import log_ai_call
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
+from google.api_core.client_options import ClientOptions
 from google.cloud import texttospeech
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
@@ -74,7 +75,7 @@ def _get_stt_client() -> SpeechClient:
         # Speech-to-Text v2 model availability is region-scoped for Chirp 2.
         # Use the regional API endpoint that matches the recognizer resource path.
         endpoint = f"{_STT_LOCATION}-speech.googleapis.com"
-        _stt_client = SpeechClient(client_options={"api_endpoint": endpoint})
+        _stt_client = SpeechClient(client_options=ClientOptions(api_endpoint=endpoint))
         return _stt_client
     except Exception as exc:
         raise RuntimeError(f"STT client init failed: {exc}") from exc

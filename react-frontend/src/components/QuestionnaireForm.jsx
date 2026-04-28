@@ -37,10 +37,19 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
   const recordButtonRef = useRef(null)
   const prevVoiceStatusRef = useRef('idle')
   const countdownTimerRef = useRef(null)
+  const workflowIdRef = useRef(null)
 
   const questions = questionnaire.questions ?? []
   const totalSteps = questions.length
   const currentQuestionForVoice = voiceMode ? questions[currentStep] : null
+  // Generate a stable workflow id for this voice-mode session (used for backend log correlation).
+  if (voiceMode && !workflowIdRef.current) {
+    try {
+      workflowIdRef.current = crypto.randomUUID()
+    } catch {
+      workflowIdRef.current = `${Date.now()}-${Math.random().toString(16).slice(2)}`
+    }
+  }
   const sttEnabledForCurrentStep =
     !!currentQuestionForVoice &&
     (currentQuestionForVoice.type === 'text' || currentQuestionForVoice.type === 'multiline')
@@ -419,6 +428,7 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
         onStatusChange={handleVoiceStatusChange}
         onError={handleVoiceError}
         silenceTimeoutMs={SILENCE_TIMEOUT_MS}
+        workflowId={workflowIdRef.current}
       />
 
       {/* Header */}
