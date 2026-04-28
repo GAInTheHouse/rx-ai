@@ -347,6 +347,53 @@
   font-style: italic;
 }
 
+/* Transcript preview panel (STT-enabled questions only) */
+.voice-transcript-preview {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-left: 4px solid #6f42c1;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+}
+
+.voice-transcript-preview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.voice-transcript-preview__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6f42c1;
+}
+
+.voice-transcript-preview__confidence {
+  font-size: 12px;
+  color: #6c757d;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.voice-transcript-preview__text {
+  margin: 0;
+  font-size: 14px;
+  color: #1a1a2e;
+  line-height: 1.4;
+}
+
+.voice-transcript-preview__hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #6c757d;
+}
+
 /* Navigation row */
 .voice-nav {
   display: flex;

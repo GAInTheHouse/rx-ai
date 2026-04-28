@@ -75,6 +75,10 @@ GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/rx-ai-sa.json
 GOOGLE_CLOUD_PROJECT=your-gcp-project-id
 GOOGLE_CLOUD_LOCATION=us-central1
 
+# Speech-to-Text v2 location (used for both the regional endpoint and recognizer path).
+# chirp_2 is available in specific regions (e.g., us-central1).
+GOOGLE_CLOUD_STT_LOCATION=us-central1
+
 # Gemini model identifiers
 GEMINI_MODEL=gemini-2.5-flash
 GEMINI_TTS_VOICE=en-US-Chirp3-HD-Aoede
@@ -154,6 +158,29 @@ Generates a personalised questionnaire based on current visit context.
 ```
 
 ---
+
+### `POST /generate-questionnaire-singlepass` *(baseline)*
+
+Single-pass Gemini baseline questionnaire generator used to compare against the 3-agent CrewAI pipeline.
+
+Uses the same request body as `/generate-questionnaire` and returns the same response shape.
+
+---
+
+## CrewAI vs single-pass
+
+Which is used by default?
+- **Default (React frontend)**: `/generate-questionnaire` (CrewAI 3-agent sequential pipeline)
+- **Baseline comparison endpoint**: `/generate-questionnaire-singlepass` (single Gemini call)
+
+Observed trade-offs:
+- **Latency**: single-pass is typically faster (1 LLM call vs 3 sequential calls).
+- **Quality**:
+  - CrewAI tends to be more **robust** when the visit context is sparse (asks safer intake questions, covers more domains).
+  - Single-pass tends to be more **direct and condition-focused**, but can make **implicit assumptions** if key structured fields are empty.
+
+Recommendation (current):
+- Keep **CrewAI** as default for now, and use single-pass when you need lower latency and can tolerate a higher assumption risk.
 
 ### `POST /questionnaire` *(legacy)*
 
@@ -249,6 +276,14 @@ curl -X POST http://localhost:8000/analyze-image \
 
 ---
 
+## Workflow correlation header
+
+To evaluate workflow combinations (e.g., question generation + TTS + STT + image analysis within the same patient check-in), send a workflow id header on every request:
+
+- `X-RxAI-Workflow-Id: <uuid>`
+
+The backend logs this value under `input.workflow_id` in JSONL/BigQuery logs.
+
 ## How it works
 
 ### Question generation — 3-agent CrewAI pipeline (Gemini 2.5 Flash)
@@ -291,7 +326,7 @@ Log schema:
 }
 ```
 
-These logs feed the evaluation pipeline described in `README_EVAL.md` (created in Week 3).
+These logs feed the evaluation pipeline described in `README_EVAL.md`.
 
 ---
 

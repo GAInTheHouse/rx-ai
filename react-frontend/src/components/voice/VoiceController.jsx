@@ -8,7 +8,7 @@ const API_BASE = 'http://localhost:8000'
  * the STT recording lifecycle. Expose an imperative API via a forwarded ref.
  *
  * Props:
- *   onTranscript(transcript, confidence) — called after a successful /stt round-trip
+ *   onTranscript(transcript, confidence, meta?) — called after a successful /stt round-trip
  *   onStatusChange(status)               — 'idle' | 'speaking' | 'listening'
  *   onError(err)                         — called on any failure; status resets to 'idle'
  *   silenceTimeoutMs                     — ms of recording before auto-stop (0 = disabled)
@@ -21,7 +21,7 @@ const API_BASE = 'http://localhost:8000'
  *   getStatus()         → string          — current status without a re-render
  */
 const VoiceController = forwardRef(function VoiceController(
-  { onTranscript, onStatusChange, onError, silenceTimeoutMs = 0 },
+  { onTranscript, onStatusChange, onError, silenceTimeoutMs = 0, workflowId = null },
   ref,
 ) {
   const [status, setStatus] = useState('idle')
@@ -83,9 +83,11 @@ const VoiceController = forwardRef(function VoiceController(
       updateStatus('speaking')
 
       try {
+        const headers = { 'Content-Type': 'application/json' }
+        if (workflowId) headers['X-RxAI-Workflow-Id'] = workflowId
         const res = await fetch(`${API_BASE}/tts`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ text }),
         })
 
@@ -152,20 +154,36 @@ const VoiceController = forwardRef(function VoiceController(
 
       const res = await fetch(`${API_BASE}/stt`, {
         method: 'POST',
+        headers: workflowId ? { 'X-RxAI-Workflow-Id': workflowId } : undefined,
         body: formData,
       })
 
-      if (!res.ok) throw new Error(`STT request failed (${res.status})`)
+      if (!res.ok) {
+        let detail = ''
+        try {
+          const errJson = await res.json()
+          detail = errJson?.detail ? String(errJson.detail) : JSON.stringify(errJson)
+        } catch {
+          try {
+            detail = await res.text()
+          } catch {
+            detail = ''
+          }
+        }
+        const suffix = detail ? `: ${detail}` : ''
+        throw new Error(`STT request failed (${res.status})${suffix}`)
+      }
 
-      const { transcript, confidence } = await res.json()
-      onTranscript?.(transcript, confidence)
+      const data = await res.json()
+      const { transcript, confidence, needs_rerecord, message, confidence_threshold } = data
+      onTranscript?.(transcript, confidence, { needs_rerecord, message, confidence_threshold })
       return { transcript, confidence }
     } catch (err) {
       updateStatus('idle')
       onError?.(err)
       throw err
     }
-  }, [updateStatus, onTranscript, onError])
+  }, [updateStatus, onTranscript, onError, workflowId])
 
   // Keep the ref current so the silence timer can call the latest version.
   stopListeningRef.current = stopListening

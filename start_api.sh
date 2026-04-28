@@ -8,8 +8,10 @@ echo ""
 # Check if .env exists
 if [ ! -f .env ]; then
     echo "⚠️  Warning: .env file not found!"
-    echo "Create a .env file with your OpenAI API key:"
-    echo "OPENAI_API_KEY=your_key_here"
+    echo "Create a .env file (copy from .env.example) and set your GCP details:"
+    echo "GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json"
+    echo "GOOGLE_CLOUD_PROJECT=your-gcp-project-id"
+    echo "GOOGLE_CLOUD_LOCATION=us-central1"
     echo ""
     exit 1
 fi
