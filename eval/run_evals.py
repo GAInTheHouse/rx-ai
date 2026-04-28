@@ -1,5 +1,5 @@
 """
-eval/run_evals.py — Rx-AI evaluation runner (Week 1 + Week 2).
+eval/run_evals.py — Rx-AI evaluation runner.
 
 Evaluates all four AI features against JSONL logs:
   • STT  — Word Error Rate (WER) via jiwer (falls back to built-in DP) against
@@ -579,35 +579,35 @@ def generate_sample_logs(log_dir: Path) -> Path:
     samples = [
         {
             "session_id": str(uuid.uuid4()), "feature": "stt", "model": "chirp_2",
-            "input": {"audio_bytes": 48000, "content_type": "audio/webm"},
+            "input": {"audio_bytes": 48000, "content_type": "audio/webm", "workflow_id": "WF_SYNTH_001"},
             "output": {"transcript": "I have been taking my metformin every morning with breakfast", "confidence": 0.94},
             "latency_ms": 820, "timestamp": f"{today}T10:01:00+00:00",
             "patient_id": "P001", "question_id": "q2", "error": None,
         },
         {
             "session_id": str(uuid.uuid4()), "feature": "stt", "model": "chirp_2",
-            "input": {"audio_bytes": 12000, "content_type": "audio/webm"},
+            "input": {"audio_bytes": 12000, "content_type": "audio/webm", "workflow_id": "WF_SYNTH_001"},
             "output": {"transcript": "my pressure uh been high", "confidence": 0.52},
             "latency_ms": 610, "timestamp": f"{today}T10:03:15+00:00",
             "patient_id": "P001", "question_id": "q3", "error": None,
         },
         {
             "session_id": str(uuid.uuid4()), "feature": "stt", "model": "chirp_2",
-            "input": {"audio_bytes": 22000, "content_type": "audio/webm"},
+            "input": {"audio_bytes": 22000, "content_type": "audio/webm", "workflow_id": "WF_SYNTH_002"},
             "output": {"transcript": "my pain level is about a seven out of ten", "confidence": 0.91},
             "latency_ms": 740, "timestamp": f"{today}T10:05:42+00:00",
             "patient_id": "P002", "question_id": "q1", "error": None,
         },
         {
             "session_id": str(uuid.uuid4()), "feature": "stt", "model": "chirp_2",
-            "input": {"audio_bytes": 3200, "content_type": "audio/webm"},
+            "input": {"audio_bytes": 3200, "content_type": "audio/webm", "workflow_id": "WF_SYNTH_003"},
             "output": {"transcript": "", "confidence": 0.0},
             "latency_ms": 510, "timestamp": f"{today}T10:07:00+00:00",
             "patient_id": "P003", "question_id": "q1", "error": None,
         },
         {
             "session_id": str(uuid.uuid4()), "feature": "stt", "model": "chirp_2",
-            "input": {"audio_bytes": 32000, "content_type": "audio/webm"},
+            "input": {"audio_bytes": 32000, "content_type": "audio/webm", "workflow_id": "WF_SYNTH_001"},
             "output": {"transcript": "I have been feeling numbness and tingling in my feet especially at night", "confidence": 0.88},
             "latency_ms": 790, "timestamp": f"{today}T10:09:20+00:00",
             "patient_id": "P001", "question_id": "q4", "error": None,
@@ -616,7 +616,7 @@ def generate_sample_logs(log_dir: Path) -> Path:
             "session_id": str(uuid.uuid4()), "feature": "question_generation",
             "model": "gemini-2.5-flash",
             "input": {"patient_id": "P001", "visit_id": "V003",
-                      "conditions": ["Type 2 Diabetes Mellitus", "Hypertension"], "endpoint": "generate-questionnaire"},
+                      "conditions": ["Type 2 Diabetes Mellitus", "Hypertension"], "endpoint": "generate-questionnaire", "workflow_id": "WF_SYNTH_001"},
             "output": {
                 "question_count": 6, "requires_image_count": 1,
                 "questions_preview": [
@@ -635,7 +635,7 @@ def generate_sample_logs(log_dir: Path) -> Path:
             "session_id": str(uuid.uuid4()), "feature": "question_generation",
             "model": "gemini-2.5-flash",
             "input": {"patient_id": "P004", "visit_id": "V002",
-                      "conditions": ["Post-operative wound", "Type 2 Diabetes Mellitus"], "endpoint": "generate-questionnaire"},
+                      "conditions": ["Post-operative wound", "Type 2 Diabetes Mellitus"], "endpoint": "generate-questionnaire", "workflow_id": "WF_SYNTH_004"},
             "output": {
                 "question_count": 5, "requires_image_count": 2,
                 "questions_preview": [
@@ -652,7 +652,7 @@ def generate_sample_logs(log_dir: Path) -> Path:
         {
             "session_id": str(uuid.uuid4()), "feature": "tts",
             "model": "en-US-Chirp3-HD-Aoede",
-            "input": {"text_length": 72, "voice": "en-US-Chirp3-HD-Aoede"},
+            "input": {"text_length": 72, "voice": "en-US-Chirp3-HD-Aoede", "workflow_id": "WF_SYNTH_001"},
             "output": {"audio_bytes": 42560},
             "latency_ms": 620, "timestamp": f"{today}T10:01:05+00:00",
             "patient_id": "P001", "question_id": "q1", "error": None,
@@ -660,7 +660,7 @@ def generate_sample_logs(log_dir: Path) -> Path:
         {
             "session_id": str(uuid.uuid4()), "feature": "tts",
             "model": "en-US-Chirp3-HD-Aoede",
-            "input": {"text_length": 0, "voice": "en-US-Chirp3-HD-Aoede"},
+            "input": {"text_length": 0, "voice": "en-US-Chirp3-HD-Aoede", "workflow_id": "WF_SYNTH_002"},
             "output": {},
             "latency_ms": 210, "timestamp": f"{today}T10:02:00+00:00",
             "patient_id": "P002", "question_id": "q1",
@@ -669,7 +669,7 @@ def generate_sample_logs(log_dir: Path) -> Path:
         {
             "session_id": str(uuid.uuid4()), "feature": "image_analysis",
             "model": "gemini-2.5-flash",
-            "input": {"image_bytes": 204800, "question": "Can you take a photo of your wound?"},
+            "input": {"image_bytes": 204800, "question": "Can you take a photo of your wound?", "workflow_id": "WF_SYNTH_004"},
             "output": {"description": "The image shows a healing surgical incision on the lower right leg approximately 6 cm in length with mild erythema at the margins and no visible purulent discharge."},
             "latency_ms": 1840, "timestamp": f"{today}T10:18:00+00:00",
             "patient_id": "P004", "question_id": "q3", "error": None,
@@ -706,7 +706,7 @@ FIXES_APPLIED = [
     {
         "issue": "Low-confidence STT transcripts silently passed to the patient",
         "fix": "Documented threshold (confidence < 0.7) in eval report. Full re-record "
-               "prompt UX is Week 3 work; backend confidence is already logged so "
+               "prompt UX is future work; backend confidence is already logged so "
                "thresholding can be added to /stt without schema changes.",
         "files": ["eval/run_evals.py"],
     },
@@ -882,8 +882,8 @@ def main() -> None:
             "Use the PatientView voice+camera mode to generate real image_analysis log entries.",
             "Re-run this script after generating image data: python eval/run_evals.py",
             "Use --deepeval for LLM-judged image accuracy (requires DeepEval + GCP credentials).",
-            "Week 3: run workflow combination evals (STT+camera vs. text-only baseline).",
-            "Week 3: add confidence < 0.7 re-record prompt to /stt endpoint.",
+            "Run workflow combination evals (STT+camera vs. text-only baseline).",
+            "Add confidence < 0.7 re-record prompt to /stt endpoint.",
         ],
     }
 

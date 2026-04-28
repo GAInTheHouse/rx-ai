@@ -8,7 +8,7 @@ const API_BASE = 'http://localhost:8000'
  * the STT recording lifecycle. Expose an imperative API via a forwarded ref.
  *
  * Props:
- *   onTranscript(transcript, confidence) — called after a successful /stt round-trip
+ *   onTranscript(transcript, confidence, meta?) — called after a successful /stt round-trip
  *   onStatusChange(status)               — 'idle' | 'speaking' | 'listening'
  *   onError(err)                         — called on any failure; status resets to 'idle'
  *   silenceTimeoutMs                     — ms of recording before auto-stop (0 = disabled)
@@ -157,8 +157,9 @@ const VoiceController = forwardRef(function VoiceController(
 
       if (!res.ok) throw new Error(`STT request failed (${res.status})`)
 
-      const { transcript, confidence } = await res.json()
-      onTranscript?.(transcript, confidence)
+      const data = await res.json()
+      const { transcript, confidence, needs_rerecord, message, confidence_threshold } = data
+      onTranscript?.(transcript, confidence, { needs_rerecord, message, confidence_threshold })
       return { transcript, confidence }
     } catch (err) {
       updateStatus('idle')

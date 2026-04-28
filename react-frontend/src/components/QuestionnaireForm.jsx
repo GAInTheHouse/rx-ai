@@ -26,6 +26,8 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
   const [voiceStatus, setVoiceStatus] = useState('idle')
   const [voiceError, setVoiceError] = useState(null)
   const [currentStep, setCurrentStep] = useState(0)
+  const [lastTranscript, setLastTranscript] = useState(null)
+  const [lastTranscriptConfidence, setLastTranscriptConfidence] = useState(null)
   // Countdown seconds shown in VoiceStatusBar while recording
   const [silenceCountdown, setSilenceCountdown] = useState(null)
   // Set of question indices already spoken in this session (avoids re-speak on re-render)
@@ -38,6 +40,10 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
 
   const questions = questionnaire.questions ?? []
   const totalSteps = questions.length
+  const currentQuestionForVoice = voiceMode ? questions[currentStep] : null
+  const sttEnabledForCurrentStep =
+    !!currentQuestionForVoice &&
+    (currentQuestionForVoice.type === 'text' || currentQuestionForVoice.type === 'multiline')
 
   // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -125,7 +131,9 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
     // TTS just ended → auto-start recording after a short pause
     if (prev === 'speaking' && newStatus === 'idle') {
       setTimeout(() => {
-        recordButtonRef.current?.activate()
+        if (sttEnabledForCurrentStep) {
+          recordButtonRef.current?.activate()
+        }
       }, TTS_TO_MIC_DELAY_MS)
     }
 
@@ -161,14 +169,24 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
       }
       setSilenceCountdown(null)
     }
-  }, [])
+  }, [sttEnabledForCurrentStep])
 
   // ── Voice mode: STT result → fill answer field ───────────────────────────────
 
-  const handleTranscript = useCallback((transcript) => {
+  const handleTranscript = useCallback((transcript, confidence, meta) => {
     if (currentStep >= totalSteps) return
     const q = questions[currentStep]
     if (!q) return
+
+    // Only surface transcript when the current question supports free-text answers.
+    if (!(q.type === 'text' || q.type === 'multiline')) return
+
+    setLastTranscript(transcript || '')
+    setLastTranscriptConfidence(confidence ?? null)
+
+    if (meta?.needs_rerecord) {
+      setVoiceError(meta.message || 'Low transcription confidence. Please re-record your answer.')
+    }
 
     // Auto-fill free-text answers from the transcript.
     // For select / checkbox / scale questions the patient must use the input
@@ -198,6 +216,8 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
       voiceControllerRef.current.cancelListening()
     }
     setVoiceError(null)
+    setLastTranscript(null)
+    setLastTranscriptConfidence(null)
     setCurrentStep(nextStep)
   }
 
@@ -432,6 +452,22 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
         )}
       </div>
 
+      {sttEnabledForCurrentStep && lastTranscript != null && (
+        <div className="voice-transcript-preview" role="status" aria-live="polite">
+          <div className="voice-transcript-preview__header">
+            <span className="voice-transcript-preview__title">Last transcript</span>
+            {lastTranscriptConfidence != null && (
+              <span className="voice-transcript-preview__confidence">
+                Confidence: {Number(lastTranscriptConfidence).toFixed(2)}
+              </span>
+            )}
+          </div>
+          <p className="voice-transcript-preview__text">
+            {lastTranscript.trim() ? lastTranscript : '(empty)'}
+          </p>
+        </div>
+      )}
+
       {/* Active question card */}
       {currentQuestion && (
         <div
@@ -461,11 +497,13 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
               ref={recordButtonRef}
               mode="toggle"
               voiceControllerRef={voiceControllerRef}
-              disabled={voiceStatus === 'speaking'}
+              disabled={voiceStatus === 'speaking' || !sttEnabledForCurrentStep}
               ariaLabel={
-                voiceStatus === 'listening'
-                  ? 'Stop recording and transcribe'
-                  : 'Start recording your answer'
+                !sttEnabledForCurrentStep
+                  ? 'Voice transcription is disabled for this question'
+                  : voiceStatus === 'listening'
+                    ? 'Stop recording and transcribe'
+                    : 'Start recording your answer'
               }
             />
 
