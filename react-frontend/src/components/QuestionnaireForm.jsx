@@ -1,37 +1,45 @@
-import { useRef, useState } from 'react'
-import PropTypes from 'prop-types'
-import CameraCapture from './camera/CameraCapture'
-import ImagePreview from './camera/ImagePreview'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import VoiceController from './voice/VoiceController'
 import RecordButton from './voice/RecordButton'
 import VoiceStatusBar from './voice/VoiceStatusBar'
-import { requiresCamera, getCameraPrompt } from '../utils/cameraUtils'
 import './QuestionnaireForm.css'
 
-const API_BASE = 'http://localhost:8000'
+// How long (ms) to wait after TTS ends before auto-activating the mic.
+const TTS_TO_MIC_DELAY_MS = 400
+// Silence auto-stop timeout passed down to VoiceController.
+const SILENCE_TIMEOUT_MS = 3000
 
-function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode }) {
+/**
+ * QuestionnaireForm
+ *
+ * Props:
+ *   questionnaire  — { id, visitId, releasedAt, questions: Question[] }
+ *   voiceMode      — bool  (default false) — step-by-step voice wizard
+ *   onSubmit(id, responses, formattedResponses)
+ *   onCancel()
+ */
+function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = false }) {
   const [responses, setResponses] = useState({})
   const [errors, setErrors] = useState({})
 
-  // Camera state — keyed by question.id
-  const [cameraOpen, setCameraOpen] = useState(null)
-  const [capturedImages, setCapturedImages] = useState({})
-  const [imageDescriptions, setImageDescriptions] = useState({})
-  const [isAnalyzing, setIsAnalyzing] = useState({})
-
-  // Voice state
+  // ── Voice mode state ────────────────────────────────────────────────────────
   const [voiceStatus, setVoiceStatus] = useState('idle')
-  // Keyed by question.id so each RecordButton shows only its own error,
-  // consistent with how capturedImages / imageDescriptions are scoped.
-  const [voiceErrors, setVoiceErrors] = useState({})
-  const voiceControllerRef = useRef(null)
-  // Tracks which question's RecordButton most recently started recording.
-  // A ref (not state) so the onTranscript closure always sees the current
-  // value without needing to be recreated on every render.
-  const activeQuestionIdRef = useRef(null)
+  const [voiceError, setVoiceError] = useState(null)
+  const [currentStep, setCurrentStep] = useState(0)
+  // Countdown seconds shown in VoiceStatusBar while recording
+  const [silenceCountdown, setSilenceCountdown] = useState(null)
+  // Set of question indices already spoken in this session (avoids re-speak on re-render)
+  const spokenStepsRef = useRef(new Set())
 
-  // ── Response helpers ────────────────────────────────────────────────
+  const voiceControllerRef = useRef(null)
+  const recordButtonRef = useRef(null)
+  const prevVoiceStatusRef = useRef('idle')
+  const countdownTimerRef = useRef(null)
+
+  const questions = questionnaire.questions ?? []
+  const totalSteps = questions.length
+
+  // ── Shared helpers ──────────────────────────────────────────────────────────
 
   const handleInputChange = (questionId, value) => {
     setResponses((prev) => ({ ...prev, [questionId]: value }))
@@ -41,85 +49,24 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode }) {
   }
 
   const handleCheckboxChange = (questionId, option, checked) => {
-    const current = responses[questionId] || []
-    const next = checked ? [...current, option] : current.filter((v) => v !== option)
-    handleInputChange(questionId, next)
-  }
-
-  // ── Camera helpers ──────────────────────────────────────────────────
-
-  const handleOpenCamera = (questionId) => setCameraOpen(questionId)
-  const handleCloseCamera = () => setCameraOpen(null)
-
-  const handleCapture = async (questionId, question, base64) => {
-    setCameraOpen(null)
-    setCapturedImages((prev) => ({ ...prev, [questionId]: base64 }))
-    setImageDescriptions((prev) => ({ ...prev, [questionId]: '' }))
-    setIsAnalyzing((prev) => ({ ...prev, [questionId]: true }))
-
-    try {
-      const res = await fetch(`${API_BASE}/analyze-image`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image_base64: base64,
-          question: question.question,
-          question_id: question.id,
-        }),
-      })
-
-      const data = res.ok ? await res.json() : { description: '' }
-      const description = data.description || ''
-      setImageDescriptions((prev) => ({ ...prev, [questionId]: description }))
-
-      // Append description to current answer (after STT transcript if any)
-      if (description) {
-        setResponses((prev) => {
-          const existing = (prev[questionId] || '').trim()
-          const appended = existing
-            ? `${existing}\n\n[Photo description: ${description}]`
-            : `[Photo description: ${description}]`
-          return { ...prev, [questionId]: appended }
-        })
-      }
-    } catch {
-      setImageDescriptions((prev) => ({ ...prev, [questionId]: '' }))
-    } finally {
-      setIsAnalyzing((prev) => ({ ...prev, [questionId]: false }))
+    const currentValues = responses[questionId] || []
+    const newValues = checked
+      ? [...currentValues, option]
+      : currentValues.filter((v) => v !== option)
+    setResponses((prev) => ({ ...prev, [questionId]: newValues }))
+    if (errors[questionId]) {
+      setErrors((prev) => ({ ...prev, [questionId]: null }))
     }
   }
 
-  const handleRetakePhoto = (questionId) => {
-    setCapturedImages((prev) => {
-      const next = { ...prev }
-      delete next[questionId]
-      return next
-    })
-    setImageDescriptions((prev) => {
-      const next = { ...prev }
-      delete next[questionId]
-      return next
-    })
-  }
-
-  // ── Voice helpers ───────────────────────────────────────────────────
-
-  const handleVoiceTranscript = (questionId, transcript) => {
-    setResponses((prev) => {
-      const existing = (prev[questionId] || '').trim()
-      const next = existing ? `${existing} ${transcript}` : transcript
-      return { ...prev, [questionId]: next }
-    })
-  }
-
-  // ── Validation + submit ─────────────────────────────────────────────
+  // ── Validation + submit ─────────────────────────────────────────────────────
 
   const validateForm = () => {
     const newErrors = {}
-    questionnaire.questions.forEach((q) => {
+    questions.forEach((q) => {
       if (q.required) {
-        const val = responses[q.id]
-        if (!val || (Array.isArray(val) ? val.length === 0 : val.trim?.() === '')) {
+        const response = responses[q.id]
+        if (!response || (Array.isArray(response) && response.length === 0) || response.trim?.() === '') {
           newErrors[q.id] = 'This question is required'
         }
       }
@@ -129,13 +76,13 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode }) {
   }
 
   const handleSubmit = (e) => {
-    e.preventDefault()
+    e?.preventDefault()
     if (!validateForm()) {
       alert('Please answer all required questions before submitting.')
       return
     }
     const formattedResponses = {}
-    questionnaire.questions.forEach((q) => {
+    questions.forEach((q) => {
       const answer = responses[q.id]
       if (answer !== undefined && answer !== null && answer !== '') {
         formattedResponses[q.question] = Array.isArray(answer)
@@ -146,122 +93,189 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode }) {
     onSubmit(questionnaire.id, responses, formattedResponses)
   }
 
-  // ── Per-question camera section ─────────────────────────────────────
+  // ── Voice mode: auto-speak on step change ───────────────────────────────────
 
-  const renderCameraSection = (question) => {
-    const needsCamera =
-      question.requires_image === true || requiresCamera(question.question)
-    if (!needsCamera) return null
+  useEffect(() => {
+    if (!voiceMode) return
+    if (currentStep >= totalSteps) return
+    if (spokenStepsRef.current.has(currentStep)) return
 
-    const captured = capturedImages[question.id]
-    const description = imageDescriptions[question.id]
-    const analyzing = isAnalyzing[question.id]
-    const prompt = question.image_prompt || getCameraPrompt(question.question)
+    const q = questions[currentStep]
+    if (!q) return
 
-    return (
-      <div className="question-camera-section">
-        {!captured ? (
-          <button
-            type="button"
-            className="camera-trigger-btn"
-            onClick={() => handleOpenCamera(question.id)}
-            aria-label="Open camera to take a photo"
-          >
-            <span aria-hidden="true">📷</span> Take Photo
-          </button>
-        ) : (
-          <ImagePreview
-            base64={captured}
-            description={description}
-            isAnalyzing={analyzing}
-            onRetake={() => handleRetakePhoto(question.id)}
-          />
-        )}
-      </div>
-    )
+    spokenStepsRef.current.add(currentStep)
+
+    // Cancel any mic session from the previous step before speaking the new one
+    if (voiceControllerRef.current?.getStatus() === 'listening') {
+      voiceControllerRef.current.cancelListening()
+    }
+
+    voiceControllerRef.current?.speak(q.question).catch((err) => {
+      setVoiceError(err.message)
+    })
+  }, [voiceMode, currentStep, totalSteps, questions])
+
+  // ── Voice mode: detect speaking→idle transition and auto-activate mic ────────
+
+  const handleVoiceStatusChange = useCallback((newStatus) => {
+    const prev = prevVoiceStatusRef.current
+    prevVoiceStatusRef.current = newStatus
+    setVoiceStatus(newStatus)
+
+    // TTS just ended → auto-start recording after a short pause
+    if (prev === 'speaking' && newStatus === 'idle') {
+      setTimeout(() => {
+        recordButtonRef.current?.activate()
+      }, TTS_TO_MIC_DELAY_MS)
+    }
+
+    // Silence timer auto-stopped the mic → sync RecordButton's local isRecording.
+    // deactivate() resets its UI and calls stopListening(), which returns early
+    // via the idempotent guard since status is already 'idle' at this point.
+    if (prev === 'listening' && newStatus === 'idle') {
+      recordButtonRef.current?.deactivate()
+    }
+
+    // Recording started → begin countdown display
+    if (newStatus === 'listening') {
+      let secs = Math.round(SILENCE_TIMEOUT_MS / 1000)
+      setSilenceCountdown(secs)
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current)
+      countdownTimerRef.current = setInterval(() => {
+        secs -= 1
+        if (secs <= 0) {
+          clearInterval(countdownTimerRef.current)
+          countdownTimerRef.current = null
+          setSilenceCountdown(null)
+        } else {
+          setSilenceCountdown(secs)
+        }
+      }, 1000)
+    }
+
+    // Recording stopped → clear countdown
+    if (prev === 'listening' && newStatus === 'idle') {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current)
+        countdownTimerRef.current = null
+      }
+      setSilenceCountdown(null)
+    }
+  }, [])
+
+  // ── Voice mode: STT result → fill answer field ───────────────────────────────
+
+  const handleTranscript = useCallback((transcript) => {
+    if (currentStep >= totalSteps) return
+    const q = questions[currentStep]
+    if (!q) return
+
+    // Auto-fill free-text answers from the transcript.
+    // For select / checkbox / scale questions the patient must use the input
+    // controls directly — mapping raw speech to a discrete option reliably
+    // would require fuzzy matching or a dedicated NLU step.
+    if (q.type === 'text' || q.type === 'multiline') {
+      setResponses((prev) => ({ ...prev, [q.id]: transcript }))
+    }
+    // Clear any stale error for this question
+    setErrors((prev) => ({ ...prev, [q.id]: null }))
+  }, [currentStep, totalSteps, questions])
+
+  // ── Voice mode: errors ───────────────────────────────────────────────────────
+
+  const handleVoiceError = useCallback((err) => {
+    setVoiceError(err.message)
+  }, [])
+
+  // Dismiss error and let the patient retry manually
+  const dismissError = () => setVoiceError(null)
+
+  // ── Voice step navigation ────────────────────────────────────────────────────
+
+  const goToStep = (nextStep) => {
+    // Cancel any in-flight recording when navigating
+    if (voiceControllerRef.current?.getStatus() === 'listening') {
+      voiceControllerRef.current.cancelListening()
+    }
+    setVoiceError(null)
+    setCurrentStep(nextStep)
   }
 
-  // ── Per-question voice section ──────────────────────────────────────
+  // ── Cleanup on unmount ───────────────────────────────────────────────────────
 
-  const renderVoiceSection = (question) => {
-    if (!voiceMode) return null
-    return (
-      <div className="question-voice-section">
-        <VoiceStatusBar status={voiceStatus} />
-        <RecordButton
-          mode="toggle"
-          voiceControllerRef={voiceControllerRef}
-          onRecordStart={() => {
-            activeQuestionIdRef.current = question.id
-            setVoiceErrors((prev) => ({ ...prev, [question.id]: null }))
-          }}
-          disabled={voiceStatus === 'speaking'}
-        />
-        {voiceErrors[question.id] && (
-          <p className="voice-error-msg">{voiceErrors[question.id]}</p>
-        )}
-        <p className="voice-hint">
-          Tap to record your answer, then tap again to stop.
-        </p>
-      </div>
-    )
-  }
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current)
+      if (voiceControllerRef.current?.getStatus() === 'listening') {
+        voiceControllerRef.current.cancelListening()
+      }
+    }
+  }, [])
 
-  // ── Question renderers ──────────────────────────────────────────────
+  // ── Question renderers ───────────────────────────────────────────────────────
 
-  const renderQuestion = (question, index) => {
+  const renderQuestionInput = (question) => {
     const hasError = errors[question.id]
 
-    const inputSection = (() => {
-      switch (question.type) {
-        case 'text':
-          return (
+    switch (question.type) {
+      case 'text':
+        return (
+          <>
             <input
               type="text"
               value={responses[question.id] || ''}
               onChange={(e) => handleInputChange(question.id, e.target.value)}
               className="question-input"
-              placeholder="Type your answer…"
+              placeholder="Type your answer or use the mic…"
+              aria-label={question.question}
             />
-          )
+            {hasError && <span className="error-message" role="alert">{hasError}</span>}
+          </>
+        )
 
-        case 'multiline':
-          return (
+      case 'multiline':
+        return (
+          <>
             <textarea
               value={responses[question.id] || ''}
               onChange={(e) => handleInputChange(question.id, e.target.value)}
               className="question-textarea"
-              placeholder="Type your answer…"
+              placeholder="Type your answer or use the mic…"
               rows={4}
+              aria-label={question.question}
             />
-          )
+            {hasError && <span className="error-message" role="alert">{hasError}</span>}
+          </>
+        )
 
-        case 'scale':
-          return (
-            <>
-              <div className="scale-container">
-                <span className="scale-label">{question.min ?? 0}</span>
-                <input
-                  type="range"
-                  min={question.min ?? 0}
-                  max={question.max ?? 10}
-                  value={responses[question.id] ?? question.min ?? 0}
-                  onChange={(e) => handleInputChange(question.id, e.target.value)}
-                  className="scale-input"
-                />
-                <span className="scale-label">{question.max ?? 10}</span>
-              </div>
-              <div className="scale-value">
-                Current value:{' '}
-                <strong>{responses[question.id] ?? question.min ?? 0}</strong>
-              </div>
-            </>
-          )
+      case 'scale':
+        return (
+          <>
+            <div className="scale-container">
+              <span className="scale-label">{question.min}</span>
+              <input
+                type="range"
+                min={question.min}
+                max={question.max}
+                value={responses[question.id] || question.min}
+                onChange={(e) => handleInputChange(question.id, e.target.value)}
+                className="scale-input"
+                aria-label={`${question.question} — value ${responses[question.id] || question.min}`}
+              />
+              <span className="scale-label">{question.max}</span>
+            </div>
+            <div className="scale-value">
+              Current value: <strong>{responses[question.id] || question.min}</strong>
+            </div>
+            {hasError && <span className="error-message" role="alert">{hasError}</span>}
+          </>
+        )
 
-        case 'radio':
-          return (
-            <div className="options-container">
-              {(question.options || []).map((option) => (
+      case 'radio':
+        return (
+          <>
+            <div className="options-container" role="radiogroup" aria-label={question.question}>
+              {question.options.map((option) => (
                 <label key={option} className="radio-option">
                   <input
                     type="radio"
@@ -274,172 +288,265 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode }) {
                 </label>
               ))}
             </div>
-          )
+            {hasError && <span className="error-message" role="alert">{hasError}</span>}
+          </>
+        )
 
-        case 'checkbox':
-          return (
+      case 'checkbox':
+        return (
+          <>
             <div className="options-container">
-              {(question.options || []).map((option) => (
+              {question.options.map((option) => (
                 <label key={option} className="checkbox-option">
                   <input
                     type="checkbox"
                     checked={(responses[question.id] || []).includes(option)}
-                    onChange={(e) =>
-                      handleCheckboxChange(question.id, option, e.target.checked)
-                    }
+                    onChange={(e) => handleCheckboxChange(question.id, option, e.target.checked)}
+                    aria-label={option}
                   />
                   <span>{option}</span>
                 </label>
               ))}
             </div>
-          )
+            {hasError && <span className="error-message" role="alert">{hasError}</span>}
+          </>
+        )
 
-        default:
-          return null
-      }
-    })()
+      default:
+        return null
+    }
+  }
+
+  // ── Standard (text-only) form ────────────────────────────────────────────────
+
+  if (!voiceMode) {
+    const answeredCount = Object.keys(responses).filter((key) => {
+      const value = responses[key]
+      return value && (Array.isArray(value) ? value.length > 0 : value.trim() !== '')
+    }).length
 
     return (
-      <div
-        key={question.id}
-        className={`question-block${hasError ? ' has-error' : ''}`}
-      >
-        <label className="question-label">
-          {index + 1}. {question.question}
-          {question.required && <span className="required">*</span>}
-          {(question.requires_image || requiresCamera(question.question)) && (
-            <span className="camera-badge" title="Photo may be requested">
-              📷
+      <div className="questionnaire-form-container">
+        <div className="questionnaire-header">
+          <h1>Patient Questionnaire</h1>
+          <p className="questionnaire-meta">
+            Visit: {questionnaire.visitId} | Released:{' '}
+            {new Date(questionnaire.releasedAt).toLocaleDateString()}
+          </p>
+          <div className="progress-indicator">
+            <span className="progress-text">
+              Progress: {answeredCount} / {questions.length} questions
             </span>
-          )}
-        </label>
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{ width: `${questions.length > 0 ? (answeredCount / questions.length) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+        </div>
 
-        {inputSection}
-        {renderCameraSection(question)}
-        {renderVoiceSection(question)}
+        <form onSubmit={handleSubmit} className="questionnaire-form">
+          <div className="questions-list">
+            {questions.map((question, index) => {
+              const hasError = errors[question.id]
+              return (
+                <div
+                  key={question.id}
+                  className={`question-block ${hasError ? 'has-error' : ''}`}
+                >
+                  <label className="question-label">
+                    {index + 1}. {question.question}
+                    {question.required && <span className="required">*</span>}
+                  </label>
+                  {renderQuestionInput(question)}
+                </div>
+              )
+            })}
+          </div>
 
-        {hasError && <span className="error-message">{hasError}</span>}
+          <div className="form-actions">
+            <button type="button" onClick={onCancel} className="cancel-button">
+              Cancel
+            </button>
+            <button type="submit" className="submit-button">
+              Submit Questionnaire
+            </button>
+          </div>
+        </form>
       </div>
     )
   }
 
-  // ── Progress ────────────────────────────────────────────────────────
+  // ── Voice mode — step-by-step wizard ─────────────────────────────────────────
 
-  const answeredCount = Object.keys(responses).filter((key) => {
-    const val = responses[key]
-    return val && (Array.isArray(val) ? val.length > 0 : val.toString().trim() !== '')
-  }).length
+  const currentQuestion = questions[currentStep]
+  const isLastStep = currentStep === totalSteps - 1
+  const currentAnswer = currentQuestion ? responses[currentQuestion.id] : undefined
+  const hasCurrentAnswer =
+    currentAnswer !== undefined &&
+    currentAnswer !== null &&
+    (Array.isArray(currentAnswer) ? currentAnswer.length > 0 : currentAnswer.toString().trim() !== '')
+
+  const progressPct = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 0
 
   return (
-    <div className="questionnaire-form-container">
-      {/* Headless voice controller — wired to every RecordButton via ref */}
-      {voiceMode && (
-        <VoiceController
-          ref={voiceControllerRef}
-          onTranscript={(transcript) => {
-            if (activeQuestionIdRef.current) {
-              handleVoiceTranscript(activeQuestionIdRef.current, transcript)
-            }
-          }}
-          onStatusChange={setVoiceStatus}
-          onError={(err) => {
-            if (activeQuestionIdRef.current) {
-              setVoiceErrors((prev) => ({
-                ...prev,
-                [activeQuestionIdRef.current]: err.message,
-              }))
-            }
-          }}
-        />
-      )}
+    <div className="questionnaire-form-container qf--voice">
+      {/* Hidden headless voice engine */}
+      <VoiceController
+        ref={voiceControllerRef}
+        onTranscript={handleTranscript}
+        onStatusChange={handleVoiceStatusChange}
+        onError={handleVoiceError}
+        silenceTimeoutMs={SILENCE_TIMEOUT_MS}
+      />
 
+      {/* Header */}
       <div className="questionnaire-header">
         <h1>Patient Questionnaire</h1>
         <p className="questionnaire-meta">
           Visit: {questionnaire.visitId} | Released:{' '}
           {new Date(questionnaire.releasedAt).toLocaleDateString()}
         </p>
-        {voiceMode && (
-          <div className="voice-mode-active-banner">
-            <VoiceStatusBar status={voiceStatus} />
-            {voiceStatus === 'idle' && (
-              <span className="voice-mode-label">Voice + Camera mode active</span>
-            )}
-          </div>
-        )}
         <div className="progress-indicator">
           <span className="progress-text">
-            Progress: {answeredCount} / {questionnaire.questions.length} questions
+            Question {currentStep + 1} of {totalSteps}
           </span>
           <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{
-                width: `${(answeredCount / questionnaire.questions.length) * 100}%`,
-              }}
-            />
+            <div className="progress-fill" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="questionnaire-form">
-        <div className="questions-list">
-          {questionnaire.questions.map((q, i) => renderQuestion(q, i))}
-        </div>
-
-        <div className="form-actions">
-          <button type="button" onClick={onCancel} className="cancel-button">
-            Cancel
+      {/* Voice Status Bar */}
+      <div className="voice-status-row">
+        <VoiceStatusBar
+          status={voiceStatus}
+          error={voiceError}
+          silenceCountdown={voiceStatus === 'listening' ? silenceCountdown : null}
+        />
+        {voiceError && (
+          <button className="voice-error-dismiss" onClick={dismissError} type="button">
+            Dismiss
           </button>
-          <button type="submit" className="submit-button">
+        )}
+      </div>
+
+      {/* Active question card */}
+      {currentQuestion && (
+        <div
+          className={`questionnaire-form voice-step-card ${
+            errors[currentQuestion.id] ? 'has-error' : ''
+          }`}
+        >
+          <div className="voice-step-header">
+            <span className="voice-step-counter">
+              {currentStep + 1} / {totalSteps}
+            </span>
+            {currentQuestion.required && (
+              <span className="required voice-required-badge">Required</span>
+            )}
+          </div>
+
+          <p className="voice-question-text">{currentQuestion.question}</p>
+
+          {/* Answer input (editable transcript for text/multiline; standard controls for others) */}
+          <div className="voice-answer-area">
+            {renderQuestionInput(currentQuestion)}
+          </div>
+
+          {/* Recording controls */}
+          <div className="voice-controls">
+            <RecordButton
+              ref={recordButtonRef}
+              mode="toggle"
+              voiceControllerRef={voiceControllerRef}
+              disabled={voiceStatus === 'speaking'}
+              ariaLabel={
+                voiceStatus === 'listening'
+                  ? 'Stop recording and transcribe'
+                  : 'Start recording your answer'
+              }
+            />
+
+            <button
+              type="button"
+              className="voice-repeat-btn"
+              onClick={() => {
+                // Allow re-speaking the current question
+                spokenStepsRef.current.delete(currentStep)
+                voiceControllerRef.current?.speak(currentQuestion.question).catch((err) =>
+                  setVoiceError(err.message),
+                )
+              }}
+              disabled={voiceStatus !== 'idle'}
+              aria-label="Repeat question"
+              title="Repeat question"
+            >
+              🔁 Repeat
+            </button>
+          </div>
+
+          {/* Editable transcript hint */}
+          {(currentQuestion.type === 'text' || currentQuestion.type === 'multiline') && (
+            <p className="voice-transcript-hint">
+              The mic fills the field above — you can edit it before moving on.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Navigation */}
+      <div className="voice-nav">
+        <button
+          type="button"
+          className="cancel-button"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+
+        {currentStep > 0 && (
+          <button
+            type="button"
+            className="voice-back-btn"
+            onClick={() => goToStep(currentStep - 1)}
+            disabled={voiceStatus === 'speaking' || voiceStatus === 'listening'}
+          >
+            ← Back
+          </button>
+        )}
+
+        {!isLastStep ? (
+          <button
+            type="button"
+            className="voice-next-btn"
+            onClick={() => goToStep(currentStep + 1)}
+            disabled={
+              voiceStatus === 'speaking' ||
+              voiceStatus === 'listening' ||
+              (currentQuestion?.required && !hasCurrentAnswer)
+            }
+          >
+            Next →
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="submit-button"
+            onClick={handleSubmit}
+            disabled={
+              voiceStatus === 'speaking' ||
+              voiceStatus === 'listening' ||
+              (currentQuestion?.required && !hasCurrentAnswer)
+            }
+          >
             Submit Questionnaire
           </button>
-        </div>
-      </form>
-
-      {/* Camera modal — rendered outside the form so it overlays everything */}
-      {cameraOpen !== null && (() => {
-        const q = questionnaire.questions.find((x) => x.id === cameraOpen)
-        if (!q) return null
-        const prompt = q.image_prompt || getCameraPrompt(q.question)
-        return (
-          <CameraCapture
-            prompt={prompt}
-            onCapture={(base64) => handleCapture(cameraOpen, q, base64)}
-            onClose={handleCloseCamera}
-          />
-        )
-      })()}
+        )}
+      </div>
     </div>
   )
-}
-
-QuestionnaireForm.propTypes = {
-  questionnaire: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    visitId: PropTypes.string,
-    releasedAt: PropTypes.string,
-    questions: PropTypes.arrayOf(
-      PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        question: PropTypes.string.isRequired,
-        type: PropTypes.string,
-        required: PropTypes.bool,
-        options: PropTypes.arrayOf(PropTypes.string),
-        requires_image: PropTypes.bool,
-        image_prompt: PropTypes.string,
-        min: PropTypes.number,
-        max: PropTypes.number,
-      }),
-    ).isRequired,
-  }).isRequired,
-  onSubmit: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-  voiceMode: PropTypes.bool,
-}
-
-QuestionnaireForm.defaultProps = {
-  voiceMode: false,
 }
 
 export default QuestionnaireForm

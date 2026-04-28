@@ -9,7 +9,14 @@ function PatientView() {
   const [pendingQuestionnaires, setPendingQuestionnaires] = useState([])
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [voiceMode, setVoiceMode] = useState(false)
+  // Persisted in localStorage so the preference survives a page refresh
+  const [voiceMode, setVoiceMode] = useState(() => {
+    try {
+      return localStorage.getItem('rxai_voice_mode') === 'true'
+    } catch {
+      return false
+    }
+  })
 
   useEffect(() => {
     loadPendingQuestionnaires()
@@ -32,7 +39,7 @@ function PatientView() {
     QuestionnaireManager.submitResponses(questionnaireId, responses, formattedResponses)
     setSelectedQuestionnaire(null)
     loadPendingQuestionnaires()
-    alert('✅ Questionnaire submitted successfully! Your responses have been sent to your provider.')
+    alert('Your responses have been submitted successfully.')
   }
 
   const handleCancelQuestionnaire = () => {
@@ -40,6 +47,16 @@ function PatientView() {
       QuestionnaireManager.updateQuestionnaireStatus(selectedQuestionnaire.id, 'pending')
     }
     setSelectedQuestionnaire(null)
+  }
+
+  const toggleVoiceMode = () => {
+    const next = !voiceMode
+    setVoiceMode(next)
+    try {
+      localStorage.setItem('rxai_voice_mode', String(next))
+    } catch {
+      // localStorage unavailable — no-op
+    }
   }
 
   if (loading) {
@@ -54,9 +71,9 @@ function PatientView() {
     return (
       <QuestionnaireForm
         questionnaire={selectedQuestionnaire}
+        voiceMode={voiceMode}
         onSubmit={handleSubmitQuestionnaire}
         onCancel={handleCancelQuestionnaire}
-        voiceMode={voiceMode}
       />
     )
   }
@@ -100,6 +117,32 @@ function PatientView() {
         </div>
       </div>
 
+      {/* Voice mode toggle */}
+      <div className="voice-mode-toggle-row">
+        <div className="voice-mode-toggle-card">
+          <div className="voice-mode-toggle-info">
+            <span className="voice-mode-icon">{voiceMode ? '🎤' : '⌨️'}</span>
+            <div>
+              <strong>{voiceMode ? 'Voice Mode — On' : 'Text Mode'}</strong>
+              <p>
+                {voiceMode
+                  ? 'Questions will be read aloud and your spoken answers will be transcribed.'
+                  : 'Use the keyboard to type your answers.'}
+              </p>
+            </div>
+          </div>
+          <button
+            className={`voice-toggle-btn ${voiceMode ? 'voice-toggle-btn--on' : ''}`}
+            onClick={toggleVoiceMode}
+            aria-pressed={voiceMode}
+            aria-label={voiceMode ? 'Switch to text mode' : 'Switch to voice mode'}
+            type="button"
+          >
+            {voiceMode ? 'Switch to Text' : 'Enable Voice'}
+          </button>
+        </div>
+      </div>
+
       <div className="questionnaires-section">
         <h2>Available Questionnaires</h2>
 
@@ -133,7 +176,7 @@ function PatientView() {
                     onClick={() => handleStartQuestionnaire(questionnaire)}
                     className="start-button"
                   >
-                    {voiceMode ? '🎤 Start with Voice + Camera →' : 'Start Questionnaire →'}
+                    {voiceMode ? '🎤 Start with Voice →' : 'Start Questionnaire →'}
                   </button>
                 </div>
               </div>
