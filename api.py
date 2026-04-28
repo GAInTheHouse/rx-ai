@@ -3,6 +3,7 @@ import base64
 import json
 import os
 import re
+import uuid
 from typing import Any, Dict, List, Optional
 
 import uvicorn
@@ -156,15 +157,13 @@ class ImageAnalysisRequest(BaseModel):
 
 
 # ─────────────────────────────────────────────
-# Utility: parse CrewAI output into a questions list
+# Utilities: parse + normalise CrewAI question output
 # ─────────────────────────────────────────────
 
 def _strip_markdown_fences(text: str) -> str:
     """Remove ```json / ``` wrappers that LLMs often add around JSON output."""
     text = text.strip()
-    # Remove opening fence (```json, ```JSON, ```, etc.)
     text = re.sub(r"^```[a-zA-Z]*\s*", "", text)
-    # Remove closing fence
     text = re.sub(r"\s*```$", "", text)
     return text.strip()
 
@@ -179,7 +178,70 @@ def _try_parse_json(raw: str):
         return json.loads(_strip_markdown_fences(raw))
     except Exception:
         pass
-    return raw  # return as-is; downstream will handle non-dict/list
+    return raw
+
+
+_IMAGE_KEYWORDS = [
+    "photo", "picture", "image", "skin", "wound", "rash", "redness",
+    "swelling", "bruise", "sore", "lesion", "medication", "pill",
+    "bottle", "prescription", "insurance card", "id card",
+]
+
+_IMAGE_PROMPT_MAP = {
+    "wound":          "Please take a photo of the wound or injury.",
+    "rash":           "Please take a close-up photo of the rash.",
+    "redness":        "Please take a photo showing the area of redness.",
+    "swelling":       "Please photograph the swollen area.",
+    "bruise":         "Please photograph the bruise.",
+    "sore":           "Please photograph the sore.",
+    "lesion":         "Please photograph the lesion.",
+    "skin":           "Please take a clear photo of the affected skin area.",
+    "medication":     "Please take a photo of your medication bottle or pill.",
+    "pill":           "Please take a photo of the pill.",
+    "bottle":         "Please take a photo of the medication bottle label.",
+    "prescription":   "Please photograph your prescription label.",
+    "insurance card": "Please take a clear photo of your insurance card.",
+    "id card":        "Please take a photo of your ID card.",
+    "photo":          "Please take a photo as requested.",
+    "picture":        "Please take a photo as requested.",
+    "image":          "Please take a photo as requested.",
+}
+
+
+def _normalize_question(q: dict) -> dict:
+    """
+    Back-fill every field so the frontend always receives a complete object.
+
+    requires_image / image_prompt logic:
+      - If the LLM already set requires_image, that value is respected.
+      - If it was omitted, keyword heuristics infer the value.
+      - image_prompt is only derived from _IMAGE_PROMPT_MAP when requires_image
+        is True; an explicit requires_image: false is never overridden with a
+        photo prompt, even if the question text contains a trigger keyword.
+    """
+    q.setdefault("id", f"q_{uuid.uuid4().hex[:12]}")
+    q.setdefault("question", "")
+    q.setdefault("type", "text")
+    q.setdefault("source", None)
+    q.setdefault("rationale", None)
+    q.setdefault("required", True)
+    q.setdefault("options", [])
+
+    question_lower = q["question"].lower()
+
+    if "requires_image" not in q:
+        q["requires_image"] = any(kw in question_lower for kw in _IMAGE_KEYWORDS)
+
+    if "image_prompt" not in q or not q.get("image_prompt"):
+        if q["requires_image"]:
+            match = next((kw for kw in _IMAGE_PROMPT_MAP if kw in question_lower), None)
+            q["image_prompt"] = _IMAGE_PROMPT_MAP[match] if match else (
+                "Please take a photo related to this question."
+            )
+        else:
+            q["image_prompt"] = ""
+
+    return q
 
 
 def _extract_questions(result) -> list:
@@ -206,42 +268,7 @@ def _extract_questions(result) -> list:
     else:
         questions = []
 
-    return questions
-
-
-# Image-trigger keywords used by both endpoints to auto-set requires_image when
-# the LLM omits the field.
-_IMAGE_KEYWORDS = frozenset([
-    "photo", "photograph", "picture", "image", "skin", "wound", "rash",
-    "lesion", "sore", "bruise", "swelling", "medication", "pill", "bottle",
-    "prescription", "insurance", "card", "scan", "show", "upload",
-])
-
-
-def _normalize_question(q: dict) -> dict:
-    """
-    Back-fill requires_image / image_prompt with safe defaults if the LLM
-    omitted them, and ensure every field defined in QuestionItem is present.
-    Also auto-detects image-relevant questions from keyword heuristics.
-    """
-    q.setdefault("id", "")
-    q.setdefault("question", "")
-    q.setdefault("type", "text")
-    q.setdefault("source", None)
-    q.setdefault("rationale", None)
-    q.setdefault("required", True)
-    q.setdefault("options", [])
-
-    text_lower = q["question"].lower()
-    auto_image = any(kw in text_lower for kw in _IMAGE_KEYWORDS)
-
-    if "requires_image" not in q:
-        q["requires_image"] = auto_image
-    if "image_prompt" not in q:
-        q["image_prompt"] = (
-            "Please take a clear photo and upload it." if q["requires_image"] else ""
-        )
-    return q
+    return [_normalize_question(q) for q in questions if isinstance(q, dict)]
 
 
 # ─────────────────────────────────────────────
@@ -346,9 +373,10 @@ async def get_questionnaire(request: PatientRequest):
         Generate 1-3 questions per problem.
         Output JSON with questionnaire containing questions array.
         Each question MUST have these exact fields:
-          id, question, type, source, rationale,
+          id, question, type, source, rationale, required, options,
           requires_image (bool — true if a photo would aid assessment),
-          image_prompt (str — concise instruction for the photo if requires_image is true, else "")
+          image_prompt (str — concise instruction for the photo if requires_image is true, else "").
+        Set requires_image=true and image_prompt for wound/rash/medication/insurance questions.
         """,
         agent=question_agent,
         expected_output="JSON with questionnaire",
@@ -477,6 +505,10 @@ async def generate_dynamic_questionnaire(request: QuestionnaireGenerationRequest
                 }}
             ]
         }}
+
+        Set requires_image to true and provide a short image_prompt for any question
+        where a photo of a wound, rash, medication bottle, or insurance card would
+        meaningfully improve the clinical answer. Otherwise set both to false/empty.
         """,
         agent=question_agent,
         expected_output="JSON with questions array including requires_image and image_prompt per question",
@@ -588,16 +620,6 @@ async def speech_to_text(audio: UploadFile = File(...)):
             features=cloud_speech.RecognitionFeatures(
                 enable_word_confidence=True,
                 enable_automatic_punctuation=True,
-                speech_contexts=[
-                    cloud_speech.SpeechContext(
-                        phrases=[
-                            "hypertension", "metformin", "lisinopril", "diabetes",
-                            "neuropathy", "blood pressure", "medication", "symptoms",
-                            "dizziness", "shortness of breath", "chest pain",
-                            "insulin", "hemoglobin A1C", "blood glucose",
-                        ]
-                    )
-                ],
             ),
         )
         stt_request = cloud_speech.RecognizeRequest(

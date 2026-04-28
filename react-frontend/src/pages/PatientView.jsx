@@ -81,8 +81,40 @@ function PatientView() {
   return (
     <div className="patient-view-container">
       <div className="patient-view-header">
-        <h1>Patient Portal</h1>
-        <p className="patient-id">Patient ID: {patientId}</p>
+        <div className="patient-view-header-top">
+          <div>
+            <h1>Patient Portal</h1>
+            <p className="patient-id">Patient ID: {patientId}</p>
+          </div>
+
+          {/* ── Voice + Camera mode toggle ─────────────────────────── */}
+          <div className="voice-mode-toggle-wrapper">
+            <span className="voice-mode-toggle-label">Input mode</span>
+            <div className="voice-mode-toggle-group" role="group" aria-label="Input mode">
+              <button
+                type="button"
+                className={`voice-mode-btn${!voiceMode ? ' voice-mode-btn--active' : ''}`}
+                onClick={() => setVoiceMode(false)}
+                aria-pressed={!voiceMode}
+              >
+                ⌨️ Text only
+              </button>
+              <button
+                type="button"
+                className={`voice-mode-btn${voiceMode ? ' voice-mode-btn--active' : ''}`}
+                onClick={() => setVoiceMode(true)}
+                aria-pressed={voiceMode}
+              >
+                🎤 Voice + Camera
+              </button>
+            </div>
+            {voiceMode && (
+              <p className="voice-mode-hint">
+                Questions will use voice input and camera where needed.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Voice mode toggle */}

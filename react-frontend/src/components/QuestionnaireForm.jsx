@@ -59,6 +59,8 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
     }
   }
 
+  // ── Validation + submit ─────────────────────────────────────────────────────
+
   const validateForm = () => {
     const newErrors = {}
     questions.forEach((q) => {
