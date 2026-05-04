@@ -36,11 +36,36 @@
 }
 
 .visit-form-header {
+  position: relative;
   padding: 24px;
+  padding-right: 56px;
   border-bottom: 2px solid #e9ecef;
   background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
   border-radius: 12px 12px 0 0;
+}
+
+.visit-form-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.visit-form-close:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .visit-form-header h2 {
@@ -270,6 +295,28 @@
   color: #6c757d;
   margin-bottom: 16px;
   line-height: 1.6;
+}
+
+.visit-option-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  max-width: 520px;
+  margin: 0 auto 16px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #495057;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.visit-option-checkbox input {
+  margin-top: 3px;
+  flex-shrink: 0;
 }
 
 .release-questionnaire-button {

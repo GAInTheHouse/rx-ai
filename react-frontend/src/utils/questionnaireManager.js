@@ -124,6 +124,34 @@ export const QuestionnaireManager = {
   }
 }
 
+/** Align scale min/max with question wording; missing values otherwise default HTML range to 0–100. */
+function normalizeScaleBoundsFromQuestion(q) {
+  const text = `${q.question || ''} ${q.rationale || ''}`
+  let min = Number(q.min)
+  let max = Number(q.max)
+  const m = text.match(/\b(\d{1,3})\s*(?:to|-|–)\s*(\d{1,3})\b/i)
+  let inferred = null
+  if (m) {
+    const a = parseInt(m[1], 10)
+    const b = parseInt(m[2], 10)
+    if (!Number.isNaN(a) && !Number.isNaN(b)) {
+      inferred = { min: Math.min(a, b), max: Math.max(a, b) }
+    }
+  }
+  if (inferred) {
+    if (!Number.isFinite(min)) min = inferred.min
+    if (!Number.isFinite(max)) max = inferred.max
+    if (Number.isFinite(max) && max === 100 && inferred.max <= 10) {
+      min = inferred.min
+      max = inferred.max
+    }
+  }
+  if (!Number.isFinite(min)) min = 0
+  if (!Number.isFinite(max)) max = 10
+  if (max <= min) max = min + 10
+  return { min, max }
+}
+
 // Dynamic Questionnaire Generation using CrewAI Backend
 export const DynamicQuestionnaireGenerator = {
   // API endpoint configuration
@@ -136,7 +164,7 @@ export const DynamicQuestionnaireGenerator = {
     console.log('Visit Context:', visitContext)
     
     try {
-      const response = await fetch(`${DynamicQuestionnaireGenerator.API_BASE_URL}/generate-questionnaire`, {
+      const response = await fetch(`${DynamicQuestionnaireGenerator.API_BASE_URL}/generate-questionnaire-singlepass`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,7 +176,8 @@ export const DynamicQuestionnaireGenerator = {
           medications: patientData.medications || [],
           allergies: patientData.allergies || [],
           issues_detected: visitContext.issues || [],
-          clinical_provider_note: visitContext.notes || ''
+          clinical_provider_note: visitContext.notes || '',
+          request_patient_images: Boolean(visitContext.requestPatientImages),
         })
       })
 
@@ -164,19 +193,29 @@ export const DynamicQuestionnaireGenerator = {
       const questions = data.questions || []
       
       return {
-        questions: questions.map((q, index) => ({
-          id: q.id || `q${index + 1}`,
-          type: q.type || 'text',
-          question: q.question || '',
-          required: q.required !== false, // Default to true
-          source: q.source || '',
-          rationale: q.rationale || '',
-          options: q.options || [],
-          min: q.min,
-          max: q.max,
-          requires_image: q.requires_image ?? false,
-          image_prompt: q.image_prompt || ''
-        }))
+        questions: questions.map((q, index) => {
+          const type = q.type || 'text'
+          const row = {
+            id: q.id || `q${index + 1}`,
+            type,
+            question: q.question || '',
+            required: q.required !== false, // Default to true
+            source: q.source || '',
+            rationale: q.rationale || '',
+            options: q.options || [],
+            requires_image: q.requires_image ?? false,
+            image_prompt: q.image_prompt || ''
+          }
+          if (type === 'scale') {
+            const b = normalizeScaleBoundsFromQuestion(q)
+            row.min = b.min
+            row.max = b.max
+          } else {
+            row.min = q.min
+            row.max = q.max
+          }
+          return row
+        })
       }
     } catch (error) {
       console.error('❌ Error calling questionnaire generation API:', error)

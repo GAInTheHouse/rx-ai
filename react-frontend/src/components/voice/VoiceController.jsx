@@ -18,6 +18,7 @@ const API_BASE = 'http://localhost:8000'
  *   startListening()    → Promise<void>   — acquires mic and starts recording
  *   stopListening()     → Promise<{ transcript, confidence }>
  *   cancelListening()   → void            — stops mic without POSTing to /stt
+ *   resetSilenceTimer() → void            — while listening, restarts auto-stop delay (extend recording)
  *   getStatus()         → string          — current status without a re-render
  */
 const VoiceController = forwardRef(function VoiceController(
@@ -206,19 +207,30 @@ const VoiceController = forwardRef(function VoiceController(
    * Acquire the microphone and start buffering audio chunks.
    * If silenceTimeoutMs > 0, auto-calls stopListening() after that delay.
    */
+  const armSilenceTimer = useCallback(() => {
+    if (silenceTimeoutMs <= 0) return
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
+    }
+    if (statusRef.current !== 'listening') return
+    silenceTimerRef.current = setTimeout(() => {
+      silenceTimerRef.current = null
+      stopListeningRef.current?.().catch(() => {})
+    }, silenceTimeoutMs)
+  }, [silenceTimeoutMs])
+
+  const resetSilenceTimer = useCallback(() => {
+    armSilenceTimer()
+  }, [armSilenceTimer])
+
   const startListening = useCallback(async () => {
     updateStatus('listening')
     try {
       await startRecording()
 
       if (silenceTimeoutMs > 0) {
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
-        silenceTimerRef.current = setTimeout(() => {
-          silenceTimerRef.current = null
-          // Errors are already forwarded to onError inside stopListening;
-          // catch here only to prevent an unhandled-rejection on auto-stop.
-          stopListeningRef.current?.().catch(() => {})
-        }, silenceTimeoutMs)
+        armSilenceTimer()
       }
     } catch (err) {
       updateStatus('idle')
@@ -232,7 +244,7 @@ const VoiceController = forwardRef(function VoiceController(
       onError?.(friendly)
       throw friendly
     }
-  }, [updateStatus, onError, silenceTimeoutMs])
+  }, [updateStatus, onError, silenceTimeoutMs, armSilenceTimer])
 
   useImperativeHandle(
     ref,
@@ -241,9 +253,10 @@ const VoiceController = forwardRef(function VoiceController(
       startListening,
       stopListening,
       cancelListening,
+      resetSilenceTimer,
       getStatus: () => statusRef.current,
     }),
-    [speak, startListening, stopListening, cancelListening],
+    [speak, startListening, stopListening, cancelListening, resetSilenceTimer],
   )
 
   return null
