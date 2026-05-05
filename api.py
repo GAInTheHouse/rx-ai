@@ -169,6 +169,7 @@ class QuestionnaireGenerationRequest(BaseModel):
     allergies: List[str] = []
     issues_detected: List[str] = []
     clinical_provider_note: str = ""
+    request_patient_images: bool = False  # provider checkbox: prompt patient to upload images
 
 
 class TTSRequest(BaseModel):
@@ -223,13 +224,14 @@ def _try_parse_json(raw: str):
 
 _IMAGE_KEYWORDS = [
     "photo", "picture", "image", "skin", "wound", "rash", "redness",
-    "swelling", "bruise", "sore", "lesion", "medication", "pill",
+    "swelling", "bruise", "sore", "lesion", "burn", "medication", "pill",
     "bottle", "prescription", "insurance card", "id card",
 ]
 
 _IMAGE_PROMPT_MAP = {
     "wound":          "Please take a photo of the wound or injury.",
     "rash":           "Please take a close-up photo of the rash.",
+    "burn":           "Please take a clear photo of the burn or affected skin.",
     "redness":        "Please take a photo showing the area of redness.",
     "swelling":       "Please photograph the swollen area.",
     "bruise":         "Please photograph the bruise.",
@@ -246,6 +248,238 @@ _IMAGE_PROMPT_MAP = {
     "picture":        "Please take a photo as requested.",
     "image":          "Please take a photo as requested.",
 }
+
+_CLINICAL_NOTE_VISUAL = re.compile(
+    r"\b(photo|picture|photograph|image|upload|attach|camera|snap|document|documentation)\b",
+    re.I,
+)
+_CLINICAL_NOTE_SITE = re.compile(
+    r"\b(burn|wound|rash|skin|lesion|injury|swelling|bruise|laceration|medication|pill|"
+    r"bottle|prescription|insurance)\b",
+    re.I,
+)
+
+
+def _clinical_note_requests_patient_photo(note: str) -> bool:
+    """True when provider free-text clearly asks the patient to submit a photo."""
+    if not (note or "").strip():
+        return False
+    n = note.lower()
+    if not _CLINICAL_NOTE_VISUAL.search(n):
+        return False
+    if _CLINICAL_NOTE_SITE.search(n):
+        return True
+    return bool(re.search(r"\b(show|send|document)\b", n))
+
+
+def _apply_clinical_photo_intent(questions: list, clinical_note: str) -> list:
+    """
+    If the model omitted requires_image but the provider note asks for a patient photo,
+    turn on requires_image for the best-matching question (or the first free-text / scale step).
+    """
+    if not questions or not _clinical_note_requests_patient_photo(clinical_note):
+        return questions
+    if any(q.get("requires_image") for q in questions):
+        return questions
+
+    note_l = clinical_note.lower()
+    site_tokens = [
+        w
+        for w in (
+            "burn",
+            "wound",
+            "rash",
+            "skin",
+            "lesion",
+            "injury",
+            "swelling",
+            "bruise",
+            "medication",
+            "prescription",
+            "insurance",
+        )
+        if w in note_l
+    ]
+
+    best_idx = None
+    for i, q in enumerate(questions):
+        ql = (q.get("question") or "").lower()
+        if site_tokens and any(t in ql for t in site_tokens):
+            best_idx = i
+            break
+    if best_idx is None:
+        for i, q in enumerate(questions):
+            ql = (q.get("question") or "").lower()
+            if any(t in ql for t in ("skin", "wound", "rash", "burn", "pain", "symptom")):
+                best_idx = i
+                break
+    if best_idx is None:
+        for i, q in enumerate(questions):
+            if q.get("type") in ("text", "multiline", "scale"):
+                best_idx = i
+                break
+    if best_idx is None:
+        best_idx = 0
+
+    target = questions[best_idx]
+    target["requires_image"] = True
+    frag = (clinical_note or "").strip()
+    if not (target.get("image_prompt") or "").strip():
+        target["image_prompt"] = (
+            frag[:280] + ("…" if len(frag) > 280 else "")
+            if len(frag) > 15
+            else "Please take a clear photo as requested in your clinician's visit notes."
+        )
+    return questions
+
+
+_DEFAULT_PROVIDER_IMAGE_PROMPT = (
+    "Your clinician requested a photo with this questionnaire. Please upload a clear image "
+    "relevant to your visit (for example affected skin or wound, swelling, medication bottle, "
+    "or prescription label)."
+)
+
+
+def _apply_provider_image_checkbox(
+    questions: list,
+    request_patient_images: bool,
+    clinical_note: str,
+    conditions: list,
+) -> list:
+    """
+    Provider checked 'ask for patient images' on release. If the model omitted requires_image,
+    attach it to the best-matching question (clinical note photo intent runs first and may
+    already satisfy this).
+    """
+    if not questions or not request_patient_images:
+        return questions
+    if any(q.get("requires_image") for q in questions):
+        return questions
+
+    cond_tokens = []
+    for c in conditions or []:
+        if not isinstance(c, str) or not c.strip():
+            continue
+        for part in re.split(r"[\s,;/]+", c.strip().lower()):
+            if len(part) > 2:
+                cond_tokens.append(part)
+
+    note_l = (clinical_note or "").lower()
+    site_tokens = [
+        w
+        for w in (
+            "burn",
+            "wound",
+            "rash",
+            "skin",
+            "lesion",
+            "injury",
+            "swelling",
+            "bruise",
+            "medication",
+            "prescription",
+            "insurance",
+            "photo",
+            "image",
+            "picture",
+        )
+        if w in note_l
+    ]
+
+    best_idx = None
+    for i, q in enumerate(questions):
+        ql = (q.get("question") or "").lower()
+        if cond_tokens and any(t in ql for t in cond_tokens):
+            best_idx = i
+            break
+    if best_idx is None:
+        for i, q in enumerate(questions):
+            ql = (q.get("question") or "").lower()
+            if site_tokens and any(t in ql for t in site_tokens):
+                best_idx = i
+                break
+    if best_idx is None:
+        for i, q in enumerate(questions):
+            ql = (q.get("question") or "").lower()
+            if any(t in ql for t in ("skin", "wound", "rash", "burn", "pain", "symptom", "photo")):
+                best_idx = i
+                break
+    if best_idx is None:
+        for i, q in enumerate(questions):
+            if q.get("type") in ("text", "multiline", "scale"):
+                best_idx = i
+                break
+    if best_idx is None:
+        best_idx = 0
+
+    target = questions[best_idx]
+    target["requires_image"] = True
+    if not (target.get("image_prompt") or "").strip():
+        frag = (clinical_note or "").strip()
+        target["image_prompt"] = (
+            frag[:280] + ("…" if len(frag) > 280 else "")
+            if len(frag) > 15
+            else _DEFAULT_PROVIDER_IMAGE_PROMPT
+        )
+    return questions
+
+
+def _coerce_required(v) -> bool:
+    """Normalize LLM output so optional questions work (avoid truthy strings)."""
+    if v is None:
+        return True
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, str):
+        s = v.strip().lower()
+        if s in ("false", "0", "no", ""):
+            return False
+        if s in ("true", "1", "yes"):
+            return True
+    return True
+
+
+def _mark_all_questions_optional(questions: list) -> list:
+    """Set required=false on every question so patients can use Skip / Next without answering."""
+    for q in questions:
+        if isinstance(q, dict):
+            q["required"] = False
+    return questions
+
+
+def _infer_scale_min_max(q: dict) -> tuple[int, int]:
+    """Infer numeric min/max for scale questions (avoids clients defaulting range to 0–100)."""
+    text = f"{q.get('question') or ''} {q.get('rationale') or ''}"
+    inferred = None
+    m = re.search(r"\b(\d{1,3})\s*(?:to|-|–)\s*(\d{1,3})\b", text, re.I)
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        inferred = (min(a, b), max(a, b))
+
+    def _to_int_or_none(v):
+        if v is None or (isinstance(v, str) and not str(v).strip()):
+            return None
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+
+    min_n = _to_int_or_none(q.get("min"))
+    max_n = _to_int_or_none(q.get("max"))
+    if inferred:
+        if min_n is None:
+            min_n = inferred[0]
+        if max_n is None:
+            max_n = inferred[1]
+        if max_n == 100 and inferred[1] <= 10:
+            min_n, max_n = inferred[0], inferred[1]
+    if min_n is None:
+        min_n = 0
+    if max_n is None:
+        max_n = 10
+    if max_n <= min_n:
+        max_n = min_n + 10
+    return min_n, max_n
 
 
 def _normalize_question(q: dict) -> dict:
@@ -264,8 +498,8 @@ def _normalize_question(q: dict) -> dict:
     q.setdefault("type", "text")
     q.setdefault("source", None)
     q.setdefault("rationale", None)
-    q.setdefault("required", True)
     q.setdefault("options", [])
+    q["required"] = _coerce_required(q.get("required"))
 
     question_lower = q["question"].lower()
 
@@ -280,6 +514,10 @@ def _normalize_question(q: dict) -> dict:
             )
         else:
             q["image_prompt"] = ""
+
+    if (q.get("type") or "text") == "scale":
+        mn, mx = _infer_scale_min_max(q)
+        q["min"], q["max"] = mn, mx
 
     return q
 
@@ -460,6 +698,7 @@ async def get_questionnaire(request: PatientRequest):
         result = crew.kickoff(inputs={"patient_data": [patient_data]})
         try:
             questions = [_normalize_question(q) for q in _extract_questions(result)]
+            questions = _mark_all_questions_optional(questions)
         except Exception as e:
             print(f"Error processing questionnaire: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
@@ -494,6 +733,7 @@ async def generate_dynamic_questionnaire(request: QuestionnaireGenerationRequest
             "allergies": request.allergies,
             "issues_detected": request.issues_detected,
             "clinical_provider_note": request.clinical_provider_note,
+            "request_patient_images": bool(request.request_patient_images),
         },
     }
 
@@ -538,17 +778,35 @@ async def generate_dynamic_questionnaire(request: QuestionnaireGenerationRequest
         - Age: {merged_data['history'].get('age', 'Unknown')}
         - Sex: {merged_data['history'].get('sex', 'Unknown')}
 
-        Generate 3-8 targeted questions that:
-        1. Assess current symptoms and their severity
-        2. Monitor medication adherence and side effects
-        3. Screen for complications related to their conditions
-        4. Gather lifestyle/behavioral information relevant to their care
+        Read current_visit.request_patient_images. If it is true, include at least one question with
+        requires_image=true and a concrete image_prompt aligned with this visit (symptoms, skin,
+        wounds, medications, etc.). If current_visit.clinical_provider_note already asks for a
+        patient photo, satisfy that intent on the best-matching question.
+
+        Read current_visit.clinical_provider_note in the merged patient context. If it asks the
+        patient to upload or take a photo (e.g. of a burn, wound, or rash), you MUST set
+        requires_image=true on the most relevant question with a concrete image_prompt.
+
+        Generate only the most clinically necessary questions (minimum 3, maximum 10; often 4–6).
+        Do not pad to a fixed count — omit generic filler. Each question must directly support
+        a care decision for this visit.
+
+        Cover when relevant:
+        1. Current symptoms and severity
+        2. Medication adherence and side effects
+        3. Complications related to their conditions
+        4. Lifestyle or behavioral factors that change management
 
         Use validated question formats when appropriate (e.g., PHQ-9 for depression, pain scales).
 
         For questions where a photo would substantially aid clinical assessment (e.g., wounds,
-        skin conditions, medication bottles, insurance cards), set requires_image to true and
+        burns, skin conditions, medication bottles, insurance cards), set requires_image to true and
         provide a concise image_prompt instructing the patient what photo to take.
+
+        For each question set "required" to true only when an answer is essential for safe triage
+        or a concrete care decision this visit. Set "required" to false for supplementary or
+        optional context (e.g. lifestyle, optional screening). If there are 3 or more questions,
+        at least one MUST have "required": false.
 
         Output JSON with this EXACT structure:
         {{
@@ -561,11 +819,15 @@ async def generate_dynamic_questionnaire(request: QuestionnaireGenerationRequest
                     "rationale": "Why this question is relevant",
                     "required": true,
                     "options": ["option1", "option2"],
+                    "min": 0,
+                    "max": 10,
                     "requires_image": false,
                     "image_prompt": ""
                 }}
             ]
         }}
+
+        For type "scale", always set integer "min" and "max" to match the scale in the question (never omit).
 
         Set requires_image to true and provide a short image_prompt for any question
         where a photo of a wound, rash, medication bottle, or insurance card would
@@ -600,6 +862,16 @@ async def generate_dynamic_questionnaire(request: QuestionnaireGenerationRequest
         print("CrewAI pipeline completed")
         try:
             questions = [_normalize_question(q) for q in _extract_questions(result)]
+            questions = _apply_clinical_photo_intent(
+                questions, getattr(request, "clinical_provider_note", "") or ""
+            )
+            questions = _apply_provider_image_checkbox(
+                questions,
+                bool(getattr(request, "request_patient_images", False)),
+                getattr(request, "clinical_provider_note", "") or "",
+                list(request.conditions or []),
+            )
+            questions = _mark_all_questions_optional(questions)
         except Exception as e:
             print(f"Error processing questionnaire: {str(e)}")
             import traceback
@@ -641,6 +913,7 @@ async def generate_questionnaire_singlepass(
             "allergies": request.allergies,
             "issues_detected": request.issues_detected,
             "clinical_provider_note": request.clinical_provider_note,
+            "request_patient_images": bool(request.request_patient_images),
         },
     }
 
@@ -660,16 +933,28 @@ async def generate_questionnaire_singlepass(
         '      "rationale": "Why this question is relevant",\n'
         '      "required": true,\n'
         '      "options": ["option1", "option2"],\n'
+        '      "min": 0,\n'
+        '      "max": 10,\n'
         '      "requires_image": false,\n'
         '      "image_prompt": ""\n'
         "    }\n"
         "  ]\n"
         "}\n\n"
         "Constraints:\n"
-        "- Generate 3–8 questions total.\n"
+        "- If current_visit.request_patient_images is true, include at least one question with "
+        "requires_image=true and a specific image_prompt describing what the patient should photograph.\n"
+        "- Read current_visit.clinical_provider_note. If it requests a patient photo, set requires_image=true "
+        "on the best-matching question with a specific image_prompt.\n"
+        "- Generate only the most necessary questions (minimum 3, maximum 10; prefer 4–6). "
+        "Do not pad to seven or any fixed count — omit boilerplate.\n"
         "- Use validated formats when appropriate (e.g., PHQ-9, pain scale).\n"
-        "- Set requires_image=true and image_prompt for wounds/skin findings, medication bottle, prescription label, or insurance card.\n"
+        "- Set requires_image=true and image_prompt for wounds, burns, skin findings, medication bottle, "
+        "prescription label, or insurance card when clinically useful.\n"
         "- image_prompt must be a short instruction; if requires_image=false then image_prompt must be empty.\n"
+        '- For type "scale", always include integer "min" and "max" matching the question (e.g. 0 and 10); never omit them.\n'
+        '- Set "required" to true only for questions essential for this visit decision; set false for '
+        "optional or supplementary questions. If there are 3+ questions, include at least one with "
+        '"required": false.\n'
     )
 
     async with log_ai_call(
@@ -693,6 +978,16 @@ async def generate_questionnaire_singlepass(
                 status_code=502,
                 detail="Single-pass generation returned malformed JSON (no questions array).",
             )
+        questions = _apply_clinical_photo_intent(
+            questions, getattr(request, "clinical_provider_note", "") or ""
+        )
+        questions = _apply_provider_image_checkbox(
+            questions,
+            bool(getattr(request, "request_patient_images", False)),
+            getattr(request, "clinical_provider_note", "") or "",
+            list(request.conditions or []),
+        )
+        questions = _mark_all_questions_optional(questions)
         log_output["question_count"] = len(questions)
         log_output["requires_image_count"] = sum(1 for q in questions if q.get("requires_image"))
         log_output["questions_preview"] = [q.get("question", "")[:120] for q in questions]

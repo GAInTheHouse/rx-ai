@@ -10,6 +10,7 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
     allergies: [],
     issues_detected: [],
     clinical_provider_note: '',
+    request_patient_images: false,
     questionnaire_responses: null
   })
 
@@ -127,7 +128,8 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
       const visitContext = {
         visitId: formData.visit_id,
         issues: formData.issues_detected,
-        notes: formData.clinical_provider_note
+        notes: formData.clinical_provider_note,
+        requestPatientImages: formData.request_patient_images,
       }
 
       // Generate questionnaire using AI/ML model (placeholder)
@@ -242,6 +244,14 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
     <div className="visit-form-overlay">
       <div className="visit-form-container">
         <div className="visit-form-header">
+          <button
+            type="button"
+            className="visit-form-close"
+            onClick={onCancel}
+            aria-label="Close visit form"
+          >
+            ×
+          </button>
           <h2>Create New Visit</h2>
           <p className="visit-id-display">Visit ID: {formData.visit_id}</p>
         </div>
@@ -414,6 +424,19 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
                 <p className="questionnaire-description">
                   Release a dynamically generated questionnaire to the patient to gather additional information about their symptoms and condition.
                 </p>
+                <label className="visit-option-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={formData.request_patient_images}
+                    onChange={(e) =>
+                      setFormData({ ...formData, request_patient_images: e.target.checked })
+                    }
+                  />
+                  <span>
+                    Ask patient to upload photo(s) with the questionnaire (e.g. skin, wound,
+                    medication label)
+                  </span>
+                </label>
                 <button
                   type="button"
                   onClick={handleReleaseQuestionnaire}
