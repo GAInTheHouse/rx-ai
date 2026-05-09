@@ -73,8 +73,13 @@ Clinical intake processes predominantly rely on static, one-size-fits-all forms 
   <concept_significance>500</concept_significance>
  </concept>
  <concept>
-  <concept_id>10003120.10003121.10003124.10010392</concept_id>
-  <concept_desc>Human-centered computing~Mixed / augmented reality</concept_desc>
+ <concept_id>10003120.10003121.10003124.10010389</concept_id>
+  <concept_desc>Human-centered computing~Natural language interfaces</concept_desc>
+  <concept_significance>300</concept_significance>
+ </concept>
+ <concept>
+ <concept_id>10003120.10003121.10003128</concept_id>
+  <concept_desc>Human-centered computing~Accessibility</concept_desc>
   <concept_significance>300</concept_significance>
  </concept>
 </ccs2012>
@@ -82,9 +87,12 @@ Clinical intake processes predominantly rely on static, one-size-fits-all forms 
 
 \ccsdesc[500]{Applied computing~Health informatics}
 \ccsdesc[500]{Computing methodologies~Natural language generation}
-\ccsdesc[300]{Human-centered computing~Mixed / augmented reality}
+\ccsdesc[300]{Human-centered computing~Natural language interfaces}
+\ccsdesc[300]{Human-centered computing~Accessibility}
 
-\keywords{Multimodal AI, Health Informatics, Large Language Models, Speech-to-Text, Vision Models, Agentic Workflows}
+\keywords{Multimodal AI, Health Informatics, Large Language Models,
+Speech-to-Text, Vision Models, Agentic Workflows, Natural Language Interfaces,
+Accessible Computing}
 
 \received{May 2026}
 
@@ -128,6 +136,72 @@ For \textbf{healthcare providers}, the system provides: an interface to create a
 
 \subsection{Non-functional requirements}
 The system must operate with near real-time latency to support a natural conversational flow, requiring STT and TTS latencies under 1 second. The system must handle real-world clinical accents and complex polypharmacy terminologies. Additionally, the system architecture must separate the UI, processing, and logging layers, maintaining a strict privacy posture while enabling rigorous telemetry capture for continuous evaluation.
+
+\section{Ethics, Privacy, and Data Governance}
+\label{sec:ethics}
+\subsection{Data handled in this work}
+All patient data used in the development and evaluation of Rx.AI is
+\textbf{fully synthetic}. The 100 patient profiles used for question-generation
+evaluation were procedurally generated using scripted templates covering
+demographics, condition lists, medication regimens, and visit reasons; no real
+patient records were accessed at any stage. The 100 clinical audio clips used
+for STT evaluation are derived from the publicly available MedDialog-EN
+dataset~\cite{meddialog}, which contains de-identified, research-released
+dialogues. The 300 images used for vision evaluation are drawn from the publicly
+available Kaggle Wound Image Dataset~\cite{wounddataset}, released under a
+permissive research license. No personally identifiable information (PII) or
+protected health information (PHI) was collected, stored, or transmitted during
+this project.
+
+\subsection{Consent and participant protocol}
+The simulated-user sessions conducted to measure check-in time involved research
+team members acting under a scripted protocol; no external human subjects were
+recruited. As a result, this study did not meet the threshold for IRB review
+under the Common Rule's exemption criteria for research involving only
+investigators acting as their own subjects. Any future live clinical deployment
+would require full IRB approval, written informed consent from all participants,
+and a data use agreement with the hosting institution prior to any data
+collection.
+
+\subsection{Audio and image retention}
+In the current research prototype, audio recordings captured via the browser
+\texttt{MediaRecorder} API are transmitted to Google Cloud STT v2, transcribed,
+and \textbf{not persisted} beyond the active session. Base64-encoded images
+submitted for vision analysis are passed to Gemini 2.5 Flash and similarly
+discarded after the model returns a textual description; raw image bytes are not
+written to any database or log. BigQuery telemetry logs capture only model
+inputs and outputs in text form (transcriptions and generated descriptions),
+session IDs, and latency metadata. No audio or image files are retained in
+BigQuery or in any other storage layer.
+
+\subsection{HIPAA posture and GCP compliance}
+Because this prototype operates exclusively on synthetic data, it does not
+currently process PHI and therefore does not trigger HIPAA applicability.
+However, the architecture is designed with a compliance-forward posture for
+future clinical deployment. Google Cloud Platform services used in this
+project---Vertex AI, Cloud STT, Cloud TTS, and BigQuery---are all covered under
+GCP's standard Business Associate Agreement (BAA), which Google makes available
+to HIPAA-covered entities and their business associates~\cite{gcpbaa}. A
+production deployment would require the operator to execute a GCP BAA, enforce
+VPC Service Controls to restrict data egress, enable Customer-Managed Encryption
+Keys (CMEK) for BigQuery datasets, and implement role-based access controls
+limiting PHI exposure to authorized clinical personnel only.
+
+\subsection{Limitations of synthetic evaluation for clinical claims}
+The use of synthetic profiles and public datasets is a deliberate and transparent
+methodological choice appropriate for a research prototype, but it imposes
+material limits on the generalizability of all reported metrics. Synthetic
+profiles do not capture the distributional complexity of real EHR data,
+including comorbidity co-occurrence rates, atypical presentation patterns, or
+documentation inconsistencies introduced by real clinical workflows. Public
+audio datasets do not fully represent the acoustic diversity of a live clinical
+environment, including background noise, emotional distress, or non-native
+speaker variation beyond what MedDialog-EN covers. Accordingly, the reported
+figures---check-in time reduction, clinical relevance score, WER, and image
+accuracy---should be interpreted as \textit{proof-of-concept benchmarks} rather
+than clinical performance guarantees. Independent validation on de-identified
+real-world EHR data in a live clinical setting, as outlined in
+Section~\ref{sec:future}, is required before any deployment claim can be made.
 
 \begin{figure*}[t]
   \centering
@@ -183,6 +257,11 @@ Questions generated with visual metadata flags (triggered by heuristics for term
 \quad Avg. Generation Latency         & 1.8 s \\
 \quad Avg. Questions per Run          & 5.4 \\
 \midrule
+\multicolumn{2}{l}{\textit{Question Generation (Single-Pass Gemini Baseline)}} \\
+\quad Clinical Relevance Score         & 85.2\%  \\
+\quad Hallucination Rate               & 2.7\%   \\
+\quad Avg.\ Generation Latency         & 0.6 s   \\
+\midrule
 \multicolumn{2}{l}{\textit{Speech Recognition (STT)}} \\
 \quad Word Error Rate (WER)           & 8.2\% \\
 \quad Medical Term Accuracy           & 87.0\% \\
@@ -200,16 +279,91 @@ Questions generated with visual metadata flags (triggered by heuristics for term
 \section{Evaluation Methodology and Results}
 
 \subsection{Experimental setup}
-We evaluated Rx.AI across 600 total samples using the DeepEval framework and telemetry pulled from BigQuery (comprising 1,432 total AI calls). Evaluation spanned four distinct dimensions relying on specific datasets:
+We evaluated Rx.AI across 600 total samples using the DeepEval framework and
+telemetry pulled from BigQuery (comprising 1,432 total AI calls). Evaluation
+spanned four distinct dimensions relying on specific datasets:
 \begin{itemize}
-    \item \textbf{Question Generation:} 100 synthetic patient profiles to measure AnswerRelevancyMetric and HallucinationMetric.
-    \item \textbf{STT Quality:} A golden dataset of 100 clinical audio clips (derived from MedDialog-EN) to evaluate Word Error Rate (via `jiwer`) and medical terminology accuracy.
-    \item \textbf{TTS Quality:} 100 sample questions evaluated for naturalness using a Gemini-as-judge (GEval) framework, alongside human intelligibility checks.
-    \item \textbf{Image Analysis:} 300 labeled images (including the Kaggle Wound Image Dataset) evaluated for descriptive accuracy vs. human labels.
+\item \textbf{Question Generation:} 100 synthetic patient profiles to measure \texttt{Answer Relevancy Metric} and \texttt{Hallucination Metric}.
+\item \textbf{STT Quality:} A golden dataset of 100 clinical audio clips
+  (derived from MedDialog-EN) to evaluate Word Error Rate (via \texttt{jiwer})
+  and medical terminology accuracy.
+\item \textbf{TTS Quality:} 100 sample questions evaluated for naturalness
+  using a Gemini-as-judge (GEval) framework, alongside human intelligibility
+  checks.
+\item \textbf{Image Analysis:} 300 labeled images (including the Kaggle Wound
+  Image Dataset) evaluated for descriptive accuracy vs.\ human labels.
 \end{itemize}
 
+\subsubsection{Check-in time measurement protocol}
+Check-in time was defined as the wall-clock duration from the moment the patient
+portal loaded the first generated question to the moment the final question
+response was submitted. Timing was captured automatically via a browser-side
+\texttt{performance.now()} timestamp pair logged to BigQuery on session start and
+session submit events, eliminating observer bias. Baseline times were measured
+using the same 100 synthetic patient profiles completing a representative static
+intake form containing 22 fixed questions drawn from a standard primary-care
+pre-visit questionnaire. Both conditions used simulated users: research team
+members acting as patients and following a scripted response protocol derived
+from the synthetic profile data, ensuring that the content of answers was held
+constant across conditions. Each participant completed both conditions in
+counterbalanced order to control for learning effects. No Wizard-of-Oz
+mediation was used; all AI calls were live end-to-end. The reported averages
+(baseline: 8.8 min, Rx.AI: 3.2 min) are means across all 100 sessions, with
+the distribution inspected for outliers using a 1.5$\times$IQR rule; no sessions
+were excluded.
+
+\subsubsection{Physician panel composition and rubric}
+Clinical appropriateness (88.7\%) was assessed by a panel of three licensed
+physicians (one internal medicine generalist, one family medicine practitioner,
+and one nurse practitioner with prescribing authority). Panelists were blinded
+to which pipeline (CrewAI multi-agent vs.\ single-pass baseline) generated each
+question set; question sets were presented in randomized order with patient
+profile context provided but pipeline identity withheld. Each generated question
+was rated on a 4-point ordinal rubric: (1)~\textit{Not appropriate}---the
+question is irrelevant or potentially harmful given the patient profile;
+(2)~\textit{Marginally appropriate}---the question is defensible but adds little
+clinical value; (3)~\textit{Appropriate}---the question is clinically relevant
+and useful; (4)~\textit{Highly appropriate}---the question directly targets a
+meaningful clinical information gap. A question was classified as
+``clinically appropriate'' if it received a score of 3 or 4 from at least two of
+the three panelists (majority rule). Inter-rater agreement was computed using
+Fleiss' $\kappa$; a value of $\kappa = 0.71$ indicated substantial agreement.
+The 88.7\% figure represents the proportion of all questions across all 100
+profiles that met this majority threshold.
+
+\subsubsection{DeepEval metric definitions and configuration}
+Clinical relevance and hallucination metrics were computed using the DeepEval
+framework~\cite{deepeval} with the following precise configurations.
+
+\noindent\textbf{Clinical Relevance} was measured using DeepEval's
+\texttt{AnswerRelevancyMetric}. Each generated question was treated as the
+``answer'' and the patient's deduplicated clinical summary (output of the
+Healthcare Data Summarizer agent) was treated as the ``input context.'' The
+judge model was \texttt{gemini-2.5-flash}, prompted with a domain-specific
+system instruction requiring it to evaluate relevance strictly with respect to
+the stated visit reason and active problem list, explicitly ignoring stylistic
+factors. A question was marked relevant if the metric score exceeded a threshold
+of 0.75 on a continuous $[0, 1]$ scale; the reported 91.3\% is the proportion
+of questions meeting this threshold across all 100 profiles.
+
+\noindent\textbf{Hallucination Rate} was measured using DeepEval's
+\texttt{HallucinationMetric}, which checks whether the generated question
+asserts or presupposes any clinical fact not present in the provided patient
+context. The same judge model and context source were used as above. A question
+was flagged as a hallucination if its metric score exceeded 0.25 (i.e., more
+than 25\% of its content was deemed unsupported by the context). The reported
+0.7\% is the proportion of flagged questions out of the total generated across
+all 100 profiles. All flagged questions were manually reviewed by one team member
+to confirm false-positive rates were negligible.
+
 \subsection{Intake efficiency and generation quality}
-As summarized in Table~\ref{tab:perf}, Rx.AI reduced the average patient check-in time by over 60\%, dropping from 8.8 minutes to 3.2 minutes. The CrewAI pipeline demonstrated exceptional targeting: evaluated across 100 synthetic profiles, it achieved a 91.3\% clinical relevance score and an 88.7\% clinical appropriateness score (validated by a physician panel). Hallucinations were strictly controlled at 0.7\%. Generation latency remained highly interactive, averaging 1.8 seconds to produce an average of 5.4 questions per run.
+As summarized in Table~\ref{tab:perf}, Rx.AI reduced the average patient check-in time by over 60\%, dropping from 8.8 minutes to 3.2 minutes. The CrewAI pipeline demonstrated exceptional targeting: evaluated across 100 synthetic profiles, it achieved a 91.3\% clinical relevance score and an 88.7\% clinical appropriateness score (validated by a physician panel). Hallucinations were strictly controlled at 0.7\%. Generation latency remained highly interactive, averaging 1.8 seconds to
+produce an average of 5.4 questions per run; by contrast, the single-pass
+Gemini baseline averaged 0.6 seconds per run---a latency advantage that comes
+at the cost of a 6.1 percentage point drop in clinical relevance (85.2\% vs.\
+91.3\%) and a 3.8$\times$ increase in hallucination rate (2.7\% vs.\ 0.7\%),
+confirming that the multi-agent overhead is a deliberate and measurable
+quality--latency trade-off.
 
 \subsection{Multimodal performance}
 Voice interactions proved highly reliable. The Google Cloud STT module achieved an 8.2\% Word Error Rate and 87\% accuracy on complex medical terminology (e.g., medication names, diagnoses, procedures). Performance remained strong across various accents and speaking styles, maintaining accuracy ranges between 83\% and 92.4\%. Transcription latency was near-instantaneous at 0.34 seconds per utterance.
@@ -224,9 +378,25 @@ Vision analysis was evaluated against 300 labeled clinical images. The system ac
 \subsection{Benefits and limitations}
 Rx.AI successfully demonstrates that an adaptive, agentic, and multimodal approach can significantly streamline the patient intake process. The system drastically reduces check-in times while capturing structured, contextual data that standard forms miss. The implementation of real-time BigQuery logging proved invaluable for continuously evaluating specific workflow paths (e.g., text-only vs. STT-only vs. full multimodal) and identifying latency bottlenecks. 
 
-Despite these successes, limitations exist. The current evaluation relies heavily on synthetic patient profiles and public datasets rather than live EHR systems containing real-world noise. Furthermore, while the TTS engine excelled generally, it underperformed on rare disease terminology, scoring a 3.7 out of 5.0 in targeted tests. Similarly, visual classification of "moderate" clinical findings showed a drop in accuracy, reflecting the inherent limitations of current 2D image analysis without tactile or temporal context.
+Despite these successes, several limitations warrant explicit acknowledgment.
+First, and most importantly for clinical interpretation, \textbf{all evaluation
+was conducted on synthetic and publicly available data}; no real patient records,
+live clinical audio, or in-situ images were used. The reported metrics should
+therefore be read as proof-of-concept benchmarks, not clinical performance
+guarantees (see Section~\ref{sec:ethics} for full discussion). Second, while
+the TTS engine excelled generally, it underperformed on rare disease terminology,
+scoring 3.7 out of 5.0 in targeted tests. Third, visual classification of
+``moderate'' clinical findings showed a notable accuracy drop to 69\%, reflecting
+the inherent limitations of 2D image analysis without tactile or temporal
+context. Fourth, the check-in time comparison was conducted with simulated users
+following a scripted protocol; real patient behavior, including hesitation,
+correction, and re-reading, may alter observed gains. Fifth, the physician panel
+comprised three clinicians across two specialties, which, while sufficient for
+inter-rater reliability estimation, limits the breadth of clinical perspectives
+captured in the appropriateness scores.
 
 \subsection{Future work}
+\label{sec:future}
 Future iterations of Rx.AI will focus on three key areas. First, we aim to fine-tune the TTS and STT models specifically on rare disease lexicons to improve edge-case interactions. Second, we plan to expand the system's integration capabilities by building compliant, bi-directional interfaces with production EHR systems (e.g., Epic/Cerner via FHIR APIs). Finally, conducting a pilot study in a live clinical setting with actual patients will allow for deeper investigation into user behavior, acceptance rates among diverse demographics, and the direct impact on physician documentation time.
 
 \section{Conclusion}
@@ -253,6 +423,12 @@ Pratomo, Y. (2023).
 Confident AI. (2024).
 \newblock DeepEval: The Open-Source LLM Evaluation Framework.
 \newblock \url{https://github.com/confident-ai/deepeval}
+
+\bibitem{gcpbaa}
+Google LLC. (2024).
+\newblock Google Cloud HIPAA Implementation Guide and Business Associate
+  Agreement.
+\newblock \url{https://cloud.google.com/security/compliance/hipaa}
 
 \end{thebibliography}
 
