@@ -138,7 +138,7 @@ We make three primary contributions: (1) an end-to-end multimodal architecture i
 Electronic Health Record (EHR) systems have digitized patient data but have done little to optimize the intake user experience. Check-in forms are static, meaning a patient visiting for a routine dermatological check may be subjected to the same exhaustive systemic review as a patient presenting with complex chronic symptoms. Additionally, patients lack tools to visually document symptoms prior to seeing the physician. If a patient experiences a rash that subsides before the appointment, a static form provides no mechanism to capture that transient visual evidence. Providers, consequently, spend the initial portion of the encounter collecting basic history rather than engaging in high-value diagnostic reasoning.
 
 \subsection{Multimodal LLMs and agentic workflows}
-Multimodal LLMs possess the capability to bridge this gap. Vision-Language Models can parse images of medication labels or clinical symptoms, summarizing them into structured, objective descriptions. Text-to-Speech (TTS) and Speech-to-Text (STT) models have achieved low-latency, high-accuracy performance even on specialized medical lexicons, enabling conversational agents. Furthermore, agentic workflows—where multiple specialized AI agents collaborate—offer a mechanism to handle complex reasoning tasks. By assigning distinct roles (e.g., data deduplication, summarization, and question generation), an agentic pipeline can produce highly relevant clinical questions while mitigating the hallucination risks associated with single-pass LLM generation.
+Multimodal LLMs possess the capability to bridge this gap. Vision-Language Models can parse images of medication labels or clinical symptoms, summarizing them into structured, objective descriptions. Text-to-Speech (TTS) and Speech-to-Text (STT) models have achieved low-latency, high-accuracy performance even on specialized medical lexicons, enabling conversational agents. Furthermore, agentic workflows---where multiple specialized AI agents collaborate---offer a mechanism to handle complex reasoning tasks~\cite{guo2024multiagent}. By assigning distinct roles (e.g., data deduplication, summarization, and question generation), an agentic pipeline can produce highly relevant clinical questions while mitigating the hallucination risks associated with single-pass LLM generation.
 
 \subsection{Design goals}
 Rx.AI is driven by three core design goals:
@@ -243,14 +243,14 @@ Rx.AI follows a modular architecture consisting of a Frontend Interface Layer, a
 
 \textbf{Backend Processing Engine.} A Python 3.11 backend built on FastAPI exposes asynchronous REST endpoints. Pydantic v2 is used for strict data validation. The backend routes incoming multimodal payloads, manages the state of the active questionnaire, and orchestrates calls to the AI layer. Static JSON representations of patient data act as the mock EHR database.
 
-\textbf{AI/Cloud Layer.} All generative AI tasks are routed through Google Cloud Vertex AI and GCP SDKs. Question generation is handled by a CrewAI orchestration framework powered by Gemini 2.5 Flash. Voice interactions utilize Google Cloud Speech-to-Text v2 and Google Cloud Text-to-Speech. Vision tasks are processed by the Gemini 2.5 Flash multimodal endpoint.
+\textbf{AI/Cloud Layer.} All generative AI tasks are routed through Google Cloud Vertex AI and GCP SDKs. Question generation is handled by a CrewAI orchestration framework~\cite{crewai} powered by Gemini 2.5 Flash~\cite{gemini}. Voice interactions utilize Google Cloud Speech-to-Text v2 and Google Cloud Text-to-Speech. Vision tasks are processed by the Gemini 2.5 Flash multimodal endpoint.
 
 \textbf{Evaluation Infrastructure.} To guarantee auditability, a FastAPI middleware wraps every AI endpoint. It captures the session ID, feature, model, inputs, outputs, latency in milliseconds, timestamp, and patient/question IDs. In development, this writes to JSONL files; in production, it streams directly to Google Cloud BigQuery.
 
 \section{Multimodal and Agentic Design}
 
 \subsection{Agentic question generation}
-The core intelligence of Rx.AI is its question generation pipeline. Rather than relying on a single, monolithic prompt, Rx.AI utilizes a three-agent CrewAI workflow:
+The core intelligence of Rx.AI is its question generation pipeline. Rather than relying on a single, monolithic prompt, Rx.AI utilizes a three-agent CrewAI workflow~\cite{crewai}:
 \begin{enumerate}
     \item \textbf{Medical Data Deduplicator:} Ingests the patient's existing clinical notes, conditions, medications, and allergies, stripping out redundant information.
     \item \textbf{Healthcare Data Summarizer:} Groups active problems and identifies clinical information gaps pertinent to the current visit reason.
@@ -259,7 +259,7 @@ The core intelligence of Rx.AI is its question generation pipeline. Rather than 
 This pipeline is benchmarked against a single-pass Gemini baseline to measure the trade-off between multi-agent quality and latency.
 
 \subsection{Voice-driven interaction loop}
-As questions appear in the UI, they are synthesized server-side using Google Cloud TTS and streamed as MP3 audio. Patients respond by speaking; audio is captured via the browser and sent to Google Cloud STT v2. The STT engine returns the transcribed text alongside word-level confidence scores. If the transcription confidence falls below a set threshold (e.g., 0.7), the system automatically flags the segment and triggers a repeat-question behavior to ensure data integrity, while preserving the user's ability to edit the transcript manually.
+As questions appear in the UI, they are synthesized server-side using Google Cloud TTS and streamed as MP3 audio. Patients respond by speaking; audio is captured via the browser and sent to Google Cloud STT v2~\cite{gcpstt}. The STT engine returns the transcribed text alongside word-level confidence scores. If the transcription confidence falls below a set threshold (e.g., 0.7), the system automatically flags the segment and triggers a repeat-question behavior to ensure data integrity, while preserving the user's ability to edit the transcript manually.
 
 \subsection{Contextual visual capture}
 Questions generated with visual metadata flags (triggered by heuristics for terms like "wound", "skin", "medication", or "insurance") automatically invoke a browser-based camera prompt. The patient captures a photo, which is sent as a base64-encoded image to Gemini 2.5 Flash. The model is strictly prompted to generate a 2-4 sentence plain-text clinical description limited \textit{only} to observable findings, explicitly forbidding diagnostic speculation. This visual summary is then appended to the patient's submitted answer for provider review.
@@ -332,8 +332,8 @@ spanned four distinct dimensions relying on specific datasets:
   (derived from MedDialog-EN) to evaluate Word Error Rate (via \texttt{jiwer})
   and medical terminology accuracy.
 \item \textbf{TTS Quality:} 100 sample questions evaluated for naturalness
-  using a Gemini-as-judge (GEval) framework, alongside human intelligibility
-  checks.
+using a Gemini-as-judge (GEval) framework~\cite{geval}, alongside human intelligibility
+checks.
 \item \textbf{Image Analysis:} 300 labeled images (including the Kaggle Wound
   Image Dataset) evaluated for descriptive accuracy vs.\ human labels.
 \end{itemize}
@@ -371,7 +371,7 @@ and useful; (4)~\textit{Highly appropriate}---the question directly targets a
 meaningful clinical information gap. A question was classified as
 ``clinically appropriate'' if it received a score of 3 or 4 from at least two of
 the three panelists (majority rule). Inter-rater agreement was computed using
-Fleiss' $\kappa$; a value of $\kappa = 0.71$ indicated substantial agreement.
+Fleiss' $\kappa$~\cite{fleiss1971}; a value of $\kappa = 0.71$ indicated substantial agreement.
 The 88.7\% figure represents the proportion of all questions across all 100
 profiles that met this majority threshold.
 
@@ -473,7 +473,7 @@ We thank the instructors and teaching staff of the Big Data \& AI course at Colu
 \end{acks}
 
 \bibliographystyle{ACM-Reference-Format}
-\begin{thebibliography}{9}
+\begin{thebibliography}{15}
 
 \bibitem{meddialog}
 Zeng, X., et al. (2020).
@@ -492,9 +492,42 @@ Confident AI. (2024).
 
 \bibitem{gcpbaa}
 Google LLC. (2024).
-\newblock Google Cloud HIPAA Implementation Guide and Business Associate
-  Agreement.
+\newblock Google Cloud HIPAA Implementation Guide and Business Associate Agreement.
 \newblock \url{https://cloud.google.com/security/compliance/hipaa}
+
+% --- NEW CITATIONS BELOW ---
+
+\bibitem{crewai}
+Moura, J. (2023).
+\newblock CrewAI: Framework for Orchestrating Role-Playing, Autonomous AI Agents.
+\newblock \emph{GitHub}. \url{https://github.com/crewaiinc/crewai}
+
+\bibitem{gemini}
+Anil, R., et al. (2023).
+\newblock Gemini: A Family of Highly Capable Multimodal Models.
+\newblock \emph{arXiv preprint arXiv:2312.11805}. \url{https://arxiv.org/abs/2312.11805}
+
+\bibitem{gcpstt}
+Google LLC. (2023).
+\newblock Google Cloud Speech-to-Text V2 API.
+\newblock \emph{Google Cloud Blog}. \url{https://cloud.google.com/blog/products/ai-machine-learning/google-cloud-speech-to-text-v2-api}
+
+\bibitem{geval}
+Liu, Y., et al. (2023).
+\newblock G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment.
+\newblock \emph{Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing (EMNLP)}.
+\newblock \url{https://aclanthology.org/2023.emnlp-main.153}
+
+\bibitem{fleiss1971}
+Fleiss, J.~L. (1971).
+\newblock Measuring nominal scale agreement among many raters.
+\newblock \emph{Psychological Bulletin}, 76(5), 378--382.
+
+\bibitem{guo2024multiagent}
+Guo, T., et al. (2024).
+\newblock Large Language Model Based Multi-Agents: A Survey of Progress and Challenges.
+\newblock \emph{Proceedings of the 33rd International Joint Conference on Artificial Intelligence (IJCAI 2024)}.
+\newblock \url{https://arxiv.org/abs/2402.01680}
 
 \end{thebibliography}
 
