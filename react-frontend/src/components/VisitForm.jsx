@@ -513,4 +513,3 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
 }
 
 export default VisitForm
-
