@@ -66,11 +66,13 @@ export const QuestionnaireManager = {
   },
 
   // Submit questionnaire responses
-  submitResponses: (questionnaireId, responses, formattedResponses) => {
+  submitResponses: (questionnaireId, responses, formattedResponses, questionnaireImages) => {
     const questionnaire = QuestionnaireManager.getQuestionnaire(questionnaireId)
     if (questionnaire) {
       questionnaire.responses = responses
       questionnaire.formattedResponses = formattedResponses // Question text -> answer
+      // Map keyed by question text: { [questionText]: { images: [{ preview, description }, ...] } }
+      questionnaire.questionnaireImages = questionnaireImages || {}
       questionnaire.status = 'completed'
       questionnaire.completedAt = new Date().toISOString()
       localStorage.setItem(`questionnaire_${questionnaireId}`, JSON.stringify(questionnaire))
@@ -80,7 +82,8 @@ export const QuestionnaireManager = {
         detail: { 
           questionnaireId, 
           responses,
-          formattedResponses 
+          formattedResponses,
+          questionnaireImages: questionnaireImages || {}
         } 
       })
       window.dispatchEvent(event)
@@ -91,6 +94,7 @@ export const QuestionnaireManager = {
         type: 'questionnaireCompleted',
         questionnaireId,
         formattedResponses,
+        questionnaireImages: questionnaireImages || {},
         timestamp: Date.now()
       }
       localStorage.setItem('questionnaire_cross_tab_event', JSON.stringify(crossTabMessage))

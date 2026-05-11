@@ -238,6 +238,22 @@ function PatientDetail() {
                     <div key={idx} className="questionnaire-response-item">
                       <div className="question-text">{question}</div>
                       <div className="answer-text">{answer}</div>
+                      {selectedVisit.questionnaire_images &&
+                        selectedVisit.questionnaire_images[question] &&
+                        Array.isArray(selectedVisit.questionnaire_images[question].images) &&
+                        selectedVisit.questionnaire_images[question].images.length > 0 && (
+                          <div className="questionnaire-image-strip" aria-label="Patient uploaded images">
+                            {selectedVisit.questionnaire_images[question].images.map((img, i) => (
+                              <img
+                                key={i}
+                                src={img.preview}
+                                alt={`Patient uploaded image ${i + 1}`}
+                                className="questionnaire-image-thumb"
+                                loading="lazy"
+                              />
+                            ))}
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>
