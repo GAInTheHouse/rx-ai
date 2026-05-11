@@ -3,7 +3,8 @@ eval/run_evals.py — Rx-AI evaluation runner.
 
 Evaluates all four AI features against JSONL logs:
   • STT  — Word Error Rate (WER) via jiwer (falls back to built-in DP) against
-            eval/datasets/stt_golden.json
+            eval/datasets/stt_golden.json; optional medical-term presence rate when
+            golden clips define ``medical_terms``
   • TTS  — latency + error-rate summary
   • Image analysis — keyword-recall vs. golden labels; optional GEval (--deepeval)
   • Question generation — structural validity + clinical keyword relevance
@@ -27,6 +28,7 @@ import os
 import re
 import sys
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -91,6 +93,19 @@ def _normalise_text(text: str) -> str:
     text = text.lower()
     text = re.sub(r"[^\w\s]", "", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _medical_term_presence_rate(hypothesis: str, terms: list[str]) -> float | None:
+    """
+    Fraction of listed clinical terms that appear in the hypothesis after the same
+    normalisation as WER (substring match on normalised strings).
+    """
+    cleaned = [t for t in (terms or []) if (t or "").strip()]
+    if not cleaned:
+        return None
+    hyp = _normalise_text(hypothesis)
+    hits = sum(1 for t in cleaned if _normalise_text(str(t)) in hyp)
+    return round(hits / len(cleaned), 4)
 
 
 def _word_error_rate(reference: str, hypothesis: str) -> float:
@@ -161,7 +176,14 @@ def _find_golden_match(transcript: str, golden: list[dict]) -> dict | None:
 def eval_stt(entries: list[dict], golden: list[dict] | None = None) -> dict:
     stt_entries = filter_feature(entries, "stt")
     if not stt_entries:
-        return {"count": 0, "note": "No STT log entries found.", "wer": None, "confidence": None, "failure_modes": []}
+        return {
+            "count": 0,
+            "note": "No STT log entries found.",
+            "wer": None,
+            "confidence": None,
+            "medical_term_accuracy": None,
+            "failure_modes": [],
+        }
 
     golden = golden or []
     confidences: list[float] = []
@@ -196,13 +218,18 @@ def eval_stt(entries: list[dict], golden: list[dict] | None = None) -> dict:
         match = _find_golden_match(transcript, golden) if golden else None
         if match:
             wer = _word_error_rate(match["reference_transcript"], transcript)
-            wer_results.append({
+            terms = match.get("medical_terms") or []
+            mt_rate = _medical_term_presence_rate(transcript, terms)
+            row = {
                 "session_id": e["session_id"],
                 "golden_id": match["id"],
                 "wer": wer,
                 "reference": match["reference_transcript"],
                 "hypothesis": transcript[:120],
-            })
+            }
+            if mt_rate is not None:
+                row["medical_term_presence_rate"] = mt_rate
+            wer_results.append(row)
 
     failure_modes: list[dict] = []
     if low_confidence:
@@ -230,6 +257,8 @@ def eval_stt(entries: list[dict], golden: list[dict] | None = None) -> dict:
 
     avg_wer = round(sum(r["wer"] for r in wer_results) / len(wer_results), 4) if wer_results else None
     avg_conf = round(sum(confidences) / len(confidences), 4) if confidences else None
+    mt_rates = [r["medical_term_presence_rate"] for r in wer_results if r.get("medical_term_presence_rate") is not None]
+    avg_med_terms = round(sum(mt_rates) / len(mt_rates), 4) if mt_rates else None
 
     return {
         "count": len(stt_entries),
@@ -240,6 +269,14 @@ def eval_stt(entries: list[dict], golden: list[dict] | None = None) -> dict:
             "matched_golden_count": len(wer_results),
             "pass": (avg_wer <= 0.10) if avg_wer is not None else None,
             "worst_cases": sorted(wer_results, key=lambda x: x["wer"], reverse=True)[:5],
+        },
+        "medical_term_accuracy": {
+            "avg_presence_rate": avg_med_terms,
+            "matched_clip_count": len(mt_rates),
+            "note": (
+                "Mean fraction of golden medical_terms found in the hypothesis transcript "
+                "(golden clips must define medical_terms; see eval/datasets/stt_golden.json)."
+            ),
         },
         "confidence": {
             "avg": avg_conf,
@@ -335,6 +372,7 @@ def eval_image_analysis_keyword(entries: list[dict]) -> dict:
                 "session_id": e["session_id"],
                 "matched_golden_id": best_sample["id"],
                 "category": best_sample["category"],
+                "severity": best_sample.get("severity") or "unknown",
                 "question": question[:80],
                 "description_preview": description[:120],
                 "key_feature_recall": round(recall, 3),
@@ -344,6 +382,20 @@ def eval_image_analysis_keyword(entries: list[dict]) -> dict:
     pass_count = sum(1 for s in scored if s["pass"])
     avg_recall = sum(s["key_feature_recall"] for s in scored) / max(len(scored), 1)
 
+    by_severity: dict[str, dict[str, Any]] = {}
+    sev_bucket: dict[str, list[dict]] = defaultdict(list)
+    for s in scored:
+        sev_bucket[str(s.get("severity") or "unknown")].append(s)
+    for sev, rows in sorted(sev_bucket.items()):
+        n = len(rows)
+        passes = sum(1 for r in rows if r["pass"])
+        recalls = [r["key_feature_recall"] for r in rows]
+        by_severity[sev] = {
+            "count": n,
+            "pass_rate": round(passes / max(n, 1), 3),
+            "avg_key_feature_recall": round(sum(recalls) / max(n, 1), 3) if recalls else None,
+        }
+
     return {
         "count": len(img_entries),
         "scored_count": len(scored),
@@ -352,6 +404,7 @@ def eval_image_analysis_keyword(entries: list[dict]) -> dict:
         "pass_rate": round(pass_count / max(len(scored), 1), 3),
         "pass_threshold": pass_threshold,
         "overall_pass": avg_recall >= pass_threshold,
+        "by_severity": by_severity,
         "failure_modes": (
             [] if avg_recall >= pass_threshold else [{
                 "type": "low_key_feature_recall",
