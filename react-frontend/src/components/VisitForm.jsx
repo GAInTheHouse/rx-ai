@@ -11,7 +11,8 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
     issues_detected: [],
     clinical_provider_note: '',
     request_patient_images: false,
-    questionnaire_responses: null
+    questionnaire_responses: null,
+    questionnaire_images: null,
   })
 
   const [questionnaireStatus, setQuestionnaireStatus] = useState({
@@ -32,7 +33,7 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
     const handleQuestionnaireCompleted = (event) => {
       console.log('📩 Received questionnaire completion event (CustomEvent):', event.detail)
       
-      const { questionnaireId, formattedResponses } = event.detail
+      const { questionnaireId, formattedResponses, questionnaireImages } = event.detail
       
       if (questionnaireId === questionnaireStatus.questionnaireId) {
         console.log('✅ Matching questionnaire! Updating form with responses:', formattedResponses)
@@ -40,7 +41,8 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
         // Auto-populate responses in form (formatted as question -> answer)
         setFormData(prev => ({
           ...prev,
-          questionnaire_responses: formattedResponses
+          questionnaire_responses: formattedResponses,
+          questionnaire_images: questionnaireImages || null,
         }))
         
         setQuestionnaireStatus(prev => ({
@@ -65,14 +67,15 @@ function VisitForm({ patientId, onSave, onCancel, visitNumber }) {
         try {
           const data = JSON.parse(event.newValue)
           
-          if (data.type === 'questionnaireCompleted' && 
+          if (data.type === 'questionnaireCompleted' &&
               data.questionnaireId === questionnaireStatus.questionnaireId) {
             console.log('✅ Matching questionnaire! Updating form with responses:', data.formattedResponses)
             
             // Auto-populate responses in form
             setFormData(prev => ({
               ...prev,
-              questionnaire_responses: data.formattedResponses
+              questionnaire_responses: data.formattedResponses,
+              questionnaire_images: data.questionnaireImages || null,
             }))
             
             setQuestionnaireStatus(prev => ({

@@ -430,7 +430,15 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
         return rest
       })
     }
-    onSubmit(questionnaire.id, responsesForSubmit, formattedResponses)
+    const imagesByQuestionText = {}
+    questions.forEach((q) => {
+      if (skipMap[q.id]) return
+      const bundle = photoByQuestion[q.id]
+      if (bundle?.images?.length) {
+        imagesByQuestionText[q.question] = bundle
+      }
+    })
+    onSubmit(questionnaire.id, responsesForSubmit, formattedResponses, imagesByQuestionText)
   }
 
   // ── Voice mode: auto-speak on step change ───────────────────────────────────
