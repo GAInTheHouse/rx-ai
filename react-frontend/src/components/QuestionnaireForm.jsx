@@ -143,6 +143,8 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
   const countdownTimerRef = useRef(null)
   const silenceDeadlineRef = useRef(0)
   const workflowIdRef = useRef(null)
+  /** performance.now() when the first question is available (check-in timer start). */
+  const checkinStartRef = useRef(null)
   const photoByQuestionRef = useRef({})
 
   useEffect(() => {
@@ -160,6 +162,11 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
       workflowIdRef.current = `${Date.now()}-${Math.random().toString(16).slice(2)}`
     }
   }, [questionnaire?.id])
+
+  useEffect(() => {
+    if (!questionnaire?.id || questions.length === 0) return
+    checkinStartRef.current = performance.now()
+  }, [questionnaire?.id, questions.length])
 
   const sttEnabledForCurrentStep =
     !!currentQuestionForVoice &&
@@ -438,6 +445,25 @@ function QuestionnaireForm({ questionnaire, onSubmit, onCancel, voiceMode = fals
         imagesByQuestionText[q.question] = bundle
       }
     })
+    if (checkinStartRef.current != null) {
+      const durationMs = Math.round(performance.now() - checkinStartRef.current)
+      if (durationMs >= 0) {
+        const payload = {
+          patient_id: questionnaire.patientId ?? null,
+          questionnaire_id: questionnaire.id,
+          duration_ms: durationMs,
+          question_count: questions.length,
+          mode: voiceMode ? 'voice' : 'text',
+        }
+        const headers = { 'Content-Type': 'application/json' }
+        if (workflowIdRef.current) headers['X-RxAI-Workflow-Id'] = workflowIdRef.current
+        fetch(`${API_BASE}/log-checkin-time`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        }).catch(() => {})
+      }
+    }
     onSubmit(questionnaire.id, responsesForSubmit, formattedResponses, imagesByQuestionText)
   }
 

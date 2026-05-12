@@ -115,6 +115,22 @@ python eval/run_evals.py
 
 Reports are written to `eval/reports/` (default: `week2.json`).
 
+#### TTS — LLM-judge scripts (DeepEval GEval)
+
+These judge **the text** sent to `/tts` (audio is not replayed in the eval).
+
+```bash
+# Naturalness / intelligibility of generic check-in questions
+python eval/tts_naturalness_eval.py --dry-run
+python eval/tts_naturalness_eval.py --log-file eval/logs/2026-05-05.jsonl
+
+# Polypharmacy: multi-drug strings and TTS-friendly spelling (pass rate = headline “pronunciation accuracy”)
+python eval/tts_polypharmacy_eval.py --dry-run
+python eval/tts_polypharmacy_eval.py --log-file eval/logs/2026-05-05.jsonl --max-from-logs 10
+```
+
+Reports default to `eval/reports/tts_naturalness_week2.json` and `eval/reports/tts_polypharmacy.json`.
+
 #### Workflow-combination evals
 
 This requires logs with `input.workflow_id` present (send `X-RxAI-Workflow-Id`).

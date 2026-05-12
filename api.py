@@ -197,6 +197,15 @@ class ImageAnalysisRequest(BaseModel):
     mime_type: Optional[str] = None  # e.g. image/jpeg, image/png (defaults to image/jpeg)
 
 
+class CheckinTimeRequest(BaseModel):
+    """Browser-reported wall time for questionnaire completion (eval / telemetry)."""
+    patient_id: Optional[str] = None
+    questionnaire_id: Optional[str] = None
+    duration_ms: float
+    question_count: int = 0
+    mode: str = "text"  # "voice" | "text"
+
+
 # ─────────────────────────────────────────────
 # Utilities: parse + normalise CrewAI question output
 # ─────────────────────────────────────────────
@@ -1185,6 +1194,34 @@ async def analyze_image(request: ImageAnalysisRequest, http_request: Request):
             raise HTTPException(status_code=502, detail=f"Vision model failed: {exc}")
 
     return {"description": description}
+
+
+@app.post("/log-checkin-time")
+async def log_checkin_time(body: CheckinTimeRequest, http_request: Request):
+    """
+    Record patient-portal check-in duration (first question shown → submit).
+    Logged like other AI features for BigQuery / JSONL workflow analysis.
+    """
+    mode = (body.mode or "text").strip().lower()
+    if mode not in ("voice", "text"):
+        raise HTTPException(status_code=400, detail='mode must be "voice" or "text"')
+
+    async with log_ai_call(
+        feature="checkin_time",
+        input_data={
+            "questionnaire_id": body.questionnaire_id,
+            "question_count": body.question_count,
+            "mode": mode,
+            "duration_ms": body.duration_ms,
+            "workflow_id": _workflow_id_from_headers(http_request),
+        },
+        model="client_timer",
+        patient_id=body.patient_id,
+    ) as log_output:
+        log_output["duration_ms"] = body.duration_ms
+        log_output["mode"] = mode
+
+    return {"ok": True}
 
 
 # ─────────────────────────────────────────────

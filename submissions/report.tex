@@ -16,10 +16,10 @@
 \setcopyright{acmlicensed}
 \copyrightyear{2026}
 \acmYear{2026}
-\acmDOI{XXXXXXX.XXXXXXX}
+\acmDOI{}
 
 \acmConference[Big Data \& AI '26]{Big Data \& AI Course Project Showcase}{May 2026}{New York, NY}
-\acmISBN{978-1-4503-XXXX-X/2026/05}
+\acmISBN{}
 
 \begin{document}
 
@@ -27,28 +27,28 @@
 
 \author{Aryaman Agrawal}
 \affiliation{%
-  \institution{Columbia University}
-  \city{New York}
-  \state{NY}
-  \country{USA}
+  % \institution{Columbia University}
+  % \city{New York}
+  % \state{NY}
+  % \country{USA}
 }
 \email{aa5775@columbia.edu}
 
 \author{Gautam Agarwal}
 \affiliation{%
-  \institution{Columbia University}
-  \city{New York}
-  \state{NY}
-  \country{USA}
+  % \institution{Columbia University}
+  % \city{New York}
+  % \state{NY}
+  % \country{USA}
 }
 \email{ga2726@columbia.edu}
 
 \author{Shivangi Kumar}
 \affiliation{%
-  \institution{Columbia University}
-  \city{New York}
-  \state{NY}
-  \country{USA}
+  % \institution{Columbia University}
+  % \city{New York}
+  % \state{NY}
+  % \country{USA}
 }
 \email{sk5659@columbia.edu}
 
@@ -73,7 +73,7 @@ total samples demonstrates measurable improvements under synthetic evaluation co
 sessions, Rx.AI reduced average patient check-in time from 8.8 minutes to
 3.2 minutes, achieved a 91.3\% clinical relevance score in question generation
 across 100 synthetic patient profiles with a 0.7\% hallucination rate as
-measured by DeepEval's \texttt{HallucinationMetric}, and attained an 8.2\%
+measured by DeepEval's \textit{HallucinationMetric}, and attained an 8.2\%
 overall Word Error Rate alongside 87\% accuracy on complex medical terminology
 including medication names and diagnoses. Our findings indicate that
 integrating multimodal AI into clinical intake significantly lowers patient
@@ -118,7 +118,6 @@ Accessible Computing}
 \received{May 2026}
 
 \maketitle
-
 \section{Introduction}
 The clinical intake process serves as the critical first point of data collection in healthcare delivery. However, the standard implementation relies on static forms that suffer from high rigidity. Patients are frequently presented with long lists of irrelevant questions, causing survey fatigue and reducing the quality of reported data. Furthermore, patients with limited mobility, visual impairments, or low digital literacy often struggle to navigate dense electronic interfaces or paper documents. From a provider's perspective, static forms cannot prompt for in-line evidence—such as capturing a photo of an inflamed wound, scanning an insurance card, or photographing a medication label—leading to incomplete pre-visit context and increased documentation burden during the actual consultation.
 
@@ -126,11 +125,11 @@ Recent advancements in Large Language Models (LLMs), multi-agent orchestration, 
 
 This paper presents \textbf{Rx.AI}, a fully personalized, multimodal intake system tailored for the modern clinical workflow. Rx.AI features a dual-sided architecture: a provider interface for visit creation and context initiation, and a patient portal featuring an adaptive questionnaire. The system employs a multi-agent generative pipeline, high-fidelity bidirectional voice capabilities, and contextual visual capture. 
 
-We make three primary contributions: (1) an end-to-end multimodal architecture integrating agentic LLMs, STT, TTS, and Vision within a browser-based clinical application; (2) a dynamic question-generation pipeline that utilizes multi-agent orchestration to deduplicate and summarize health records before generating targeted questions; and (3) a comprehensive evaluation methodology utilizing real-time BigQuery telemetry and DeepEval metrics across 600 synthetic profiles and audio/visual datasets, demonstrating marked improvements in both clinical accuracy and intake efficiency.
+We make three primary contributions: (1) an end-to-end multimodal architecture integrating agentic LLMs, STT, TTS, and Vision within a browser-based clinical application; (2) a dynamic question-generation pipeline that utilizes multi-agent orchestration to deduplicate and summarize health records before generating targeted questions; and (3) a comprehensive evaluation methodology utilizing real-time BigQuery telemetry and DeepEval metrics across 600 synthetic profiles and audio/visual datasets, demonstrating marked improvements in both clinical accuracy and intake efficiency.\\ \\
 
 \noindent\textbf{Resources.} The source code and demo video are publicly available:\\
 \textbf{GitHub:} \href{https://github.com/GAInTheHouse/rx-ai}{GAInTheHouse/Rx.AI}\\
-\textbf{Demo:} \href{https://github.com/GAInTheHouse/rx-ai/blob/gxa/final-submissions/submissions/rx_ai_demo_video.mov}{Product Demo}
+\textbf{Demo:} \href{https://github.com/GAInTheHouse/rx-ai/blob/main/submissions/rx_ai_demo_video.mov}{Product Demo}
 
 \section{Background and Motivation}
 
@@ -191,7 +190,7 @@ collection.
 
 \subsection{Audio and image retention}
 In the current research prototype, audio recordings captured via the browser
-\texttt{MediaRecorder} API are transmitted to Google Cloud STT v2, transcribed,
+\textit{MediaRecorder} API are transmitted to Google Cloud STT v2, transcribed,
 and \textbf{not persisted} beyond the active session. Base64-encoded images
 submitted for vision analysis are passed to Gemini 2.5 Flash and similarly
 discarded after the model returns a textual description; raw image bytes are not
@@ -239,7 +238,7 @@ Section~\ref{sec:future}, is required before any deployment claim can be made.
 \section{System Architecture}
 Rx.AI follows a modular architecture consisting of a Frontend Interface Layer, a Backend Processing Engine, an AI/Cloud Layer, and an Evaluation Infrastructure.
 
-\textbf{Frontend Interface.} The client applications are developed in JavaScript using React 18, Vite, and Tailwind CSS. The patient view and questionnaire forms manage local state  and utilize the browser's `MediaRecorder` API for capturing webm/opus audio and base64-encoded images.
+\textbf{Frontend Interface.} The client applications are developed in JavaScript using React 18 and Vite. The patient view and questionnaire forms manage local state  and utilize the browser's `MediaRecorder` API for capturing webm/opus audio and base64-encoded images.
 
 \textbf{Backend Processing Engine.} A Python 3.11 backend built on FastAPI exposes asynchronous REST endpoints. Pydantic v2 is used for strict data validation. The backend routes incoming multimodal payloads, manages the state of the active questionnaire, and orchestrates calls to the AI layer. Static JSON representations of patient data act as the mock EHR database.
 
@@ -296,7 +295,7 @@ documented uncertainty in that class.
 \midrule
 \multicolumn{2}{l}{\textit{Question Generation (CrewAI)}} \\
 \quad Clinical Relevance Score        & 91.3\% \\
-\quad Clinical Appropriateness        & 88.7\% \\
+% \quad Clinical Appropriateness        & 88.7\% \\
 \quad Hallucination Rate              & 0.7\% \\
 \quad Avg. Generation Latency         & 1.8 s \\
 \quad Avg. Questions per Run          & 5.4 \\
@@ -327,7 +326,7 @@ We evaluated Rx.AI across 600 total samples using the DeepEval framework and
 telemetry pulled from BigQuery (comprising 1,432 total AI calls). Evaluation
 spanned four distinct dimensions relying on specific datasets:
 \begin{itemize}
-\item \textbf{Question Generation:} 100 synthetic patient profiles to measure \texttt{Answer Relevancy Metric} and \texttt{Hallucination Metric}.
+\item \textbf{Question Generation:} 100 synthetic patient profiles to measure \textit{Answer Relevancy Metric} and \textit{Hallucination Metric}.
 \item \textbf{STT Quality:} A golden dataset of 100 clinical audio clips
   (derived from MedDialog-EN) to evaluate Word Error Rate (via \texttt{jiwer})
   and medical terminology accuracy.
@@ -356,31 +355,30 @@ mediation was used; all AI calls were live end-to-end. The reported averages
 the distribution inspected for outliers using a 1.5$\times$IQR rule; no sessions
 were excluded.
 
-\subsubsection{Physician panel composition and rubric}
-Clinical appropriateness (88.7\%) was assessed by a panel of three licensed
-physicians (one internal medicine generalist, one family medicine practitioner,
-and one nurse practitioner with prescribing authority). Panelists were blinded
-to which pipeline (CrewAI multi-agent vs.\ single-pass baseline) generated each
-question set; question sets were presented in randomized order with patient
-profile context provided but pipeline identity withheld. Each generated question
-was rated on a 4-point ordinal rubric: (1)~\textit{Not appropriate}---the
-question is irrelevant or potentially harmful given the patient profile;
-(2)~\textit{Marginally appropriate}---the question is defensible but adds little
-clinical value; (3)~\textit{Appropriate}---the question is clinically relevant
-and useful; (4)~\textit{Highly appropriate}---the question directly targets a
-meaningful clinical information gap. A question was classified as
-``clinically appropriate'' if it received a score of 3 or 4 from at least two of
-the three panelists (majority rule). Inter-rater agreement was computed using
-Fleiss' $\kappa$~\cite{fleiss1971}; a value of $\kappa = 0.71$ indicated substantial agreement.
-The 88.7\% figure represents the proportion of all questions across all 100
-profiles that met this majority threshold.
+% \subsubsection{Physician panel composition and rubric}
+% Clinical appropriateness (88.7\%) was assessed by a panel of three licensed
+% physicians (one internal medicine generalist, one family medicine practitioner,
+% and one nurse practitioner with prescribing authority). Panelists were blinded
+% to which pipeline (CrewAI multi-agent vs.\ single-pass baseline) generated each
+% question set; question sets were presented in randomized order with patient
+% profile context provided but pipeline identity withheld. Each generated question
+% was rated on a 4-point ordinal rubric: (1)~\textit{Not appropriate}---the
+% question is irrelevant or potentially harmful given the patient profile;
+% (2)~\textit{Marginally appropriate}---the question is defensible but adds little
+% clinical value; (3)~\textit{Appropriate}---the question is clinically relevant
+% and useful; (4)~\textit{Highly appropriate}---the question directly targets a
+% meaningful clinical information gap. A question was classified as
+% ``clinically appropriate'' if it received a score of 3 or 4 from at least two of
+% the three panelists (majority rule). Inter-rater agreement was computed using
+% Fleiss' $\kappa$~\cite{fleiss1971}; a value of $\kappa = 0.71$ indicated substantial agreement.
+% The 88.7\% figure represents the proportion of all questions across all 100
+% profiles that met this majority threshold.
 
 \subsubsection{DeepEval metric definitions and configuration}
 Clinical relevance and hallucination metrics were computed using the DeepEval
 framework~\cite{deepeval} with the following precise configurations.
 
-\noindent\textbf{Clinical Relevance} was measured using DeepEval's
-\texttt{AnswerRelevancyMetric}. Each generated question was treated as the
+\noindent\textbf{Clinical Relevance} was measured using DeepEval's \textit{AnswerRelevancyMetric}. Each generated question was treated as the
 ``answer'' and the patient's deduplicated clinical summary (output of the
 Healthcare Data Summarizer agent) was treated as the ``input context.'' The
 judge model was \texttt{gemini-2.5-flash}, prompted with a domain-specific
@@ -391,7 +389,7 @@ of 0.75 on a continuous $[0, 1]$ scale; the reported 91.3\% is the proportion
 of questions meeting this threshold across all 100 profiles.
 
 \noindent\textbf{Hallucination Rate} was measured using DeepEval's
-\texttt{HallucinationMetric}, which checks whether the generated question
+\textit{HallucinationMetric}, which checks whether the generated question
 asserts or presupposes any clinical fact not present in the provided patient
 context. The same judge model and context source were used as above. A question
 was flagged as a hallucination if its metric score exceeded 0.25 (i.e., more
@@ -402,7 +400,7 @@ to confirm false-positive rates were negligible.
 
 \subsection{Intake efficiency and generation quality}
 As summarized in Table~\ref{tab:perf}, Rx.AI reduced the average patient check-in time by over 60\%, dropping from 8.8 minutes to 3.2 minutes. The CrewAI pipeline achieved strong targeting performance: evaluated across
-100 synthetic profiles, it attained a 91.3\% clinical relevance score and an 88.7\% clinical appropriateness score (validated by a physician panel). Hallucinations were strictly controlled at 0.7\%. Generation latency remained highly interactive, averaging 1.8 seconds to
+100 synthetic profiles, it attained a 91.3\% clinical relevance score. Hallucinations were strictly controlled at 0.7\%. Generation latency remained highly interactive, averaging 1.8 seconds to
 produce an average of 5.4 questions per run; by contrast, the single-pass
 Gemini baseline averaged 0.6 seconds per run---a latency advantage that comes
 at the cost of a 6.1 percentage point drop in clinical relevance (85.2\% vs.\
@@ -445,7 +443,7 @@ examination. The 69\% figure specifically implies that approximately one in
 three moderate presentations will be described in a manner inconsistent with
 a trained clinician's assessment, a non-trivial error rate in any clinical
 workflow. Fourth, the 0.7\% hallucination rate is an upper-bound estimate conditional
-on the precision of DeepEval's \texttt{HallucinationMetric}; the metric's
+on the precision of DeepEval's \textit{HallucinationMetric}; the metric's
 own recall on clinical hallucinations is unvalidated, meaning hallucinations
 that evade the metric threshold are not captured in this figure. An
 independent LLM judge from a separate model family would strengthen this
@@ -455,10 +453,11 @@ self-referential bias. Future evaluations should employ an independent
 judge from a distinct model family to reduce circularity in relevance
 assessment. Sixth, the check-in time comparison was conducted with simulated users
 following a scripted protocol; real patient behavior, including hesitation,
-correction, and re-reading, may alter observed gains. Seventh, the physician panel
-comprised three clinicians across two specialties, which, while sufficient for
-inter-rater reliability estimation, limits the breadth of clinical perspectives
-captured in the appropriateness scores.
+correction, and re-reading, may alter observed gains. 
+% Seventh, the physician panel
+% comprised three clinicians across two specialties, which, while sufficient for
+% inter-rater reliability estimation, limits the breadth of clinical perspectives
+% captured in the appropriateness scores.
 
 \subsection{Future work}
 \label{sec:future}
@@ -476,7 +475,7 @@ We thank the instructors and teaching staff of the Big Data \& AI course at Colu
 \begin{thebibliography}{15}
 
 \bibitem{meddialog}
-Zeng, X., et al. (2020).
+Zeng, G., et al. (2020).
 \newblock MedDialog: Large-scale Medical Dialogue Datasets.
 \newblock \emph{Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)}.
 
@@ -498,7 +497,7 @@ Google LLC. (2024).
 % --- NEW CITATIONS BELOW ---
 
 \bibitem{crewai}
-Moura, J. (2023).
+Crew AI (2023).
 \newblock CrewAI: Framework for Orchestrating Role-Playing, Autonomous AI Agents.
 \newblock \emph{GitHub}. \url{https://github.com/crewaiinc/crewai}
 
@@ -518,10 +517,10 @@ Liu, Y., et al. (2023).
 \newblock \emph{Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing (EMNLP)}.
 \newblock \url{https://aclanthology.org/2023.emnlp-main.153}
 
-\bibitem{fleiss1971}
-Fleiss, J.~L. (1971).
-\newblock Measuring nominal scale agreement among many raters.
-\newblock \emph{Psychological Bulletin}, 76(5), 378--382.
+% \bibitem{fleiss1971}
+% Fleiss, J.~L. (1971).
+% \newblock Measuring nominal scale agreement among many raters.
+% \newblock \emph{Psychological Bulletin}, 76(5), 378--382.
 
 \bibitem{guo2024multiagent}
 Guo, T., et al. (2024).
