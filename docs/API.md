@@ -326,7 +326,7 @@ Log schema:
 }
 ```
 
-These logs feed the evaluation pipeline described in `README_EVAL.md`.
+These logs feed the evaluation pipeline described in [eval/README.md](../eval/README.md).
 
 ---
 

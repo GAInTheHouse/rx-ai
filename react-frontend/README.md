@@ -67,7 +67,7 @@ The app will open automatically at `http://localhost:3000`
 5. Complete and submit the questionnaire
 6. **Provider**: See responses auto-populate!
 
-See [QUESTIONNAIRE_WORKFLOW.md](./QUESTIONNAIRE_WORKFLOW.md) for detailed instructions.
+See the **Testing the Questionnaire Workflow** section above and the root [README.md](../README.md) for API setup.
 
 ### Build for Production
 
@@ -105,7 +105,7 @@ react-frontend/
 ├── README.md
 ├── QUICKSTART.md
 ├── CREATE_VISIT_GUIDE.md
-└── QUESTIONNAIRE_WORKFLOW.md      # 🤖 AI workflow documentation
+├── README.md                      # UI setup; API docs at ../docs/API.md
 ```
 
 ## Technology Stack
@@ -125,17 +125,14 @@ react-frontend/
 - ✅ **Patient portal with real-time questionnaires**
 - ✅ **Auto-population of questionnaire responses**
 
-### AI Integration (Critical Next Step) 🤖
-- [ ] **Integrate ML model with DynamicQuestionnaireGenerator**
-  - Replace placeholder in `src/utils/questionnaireManager.js`
-  - Connect to your AI backend/API
-  - Generate contextual questions based on patient data
+### AI integration
+- The app calls the FastAPI backend (`/generate-questionnaire`, `/tts`, `/stt`, `/analyze-image`). Configure the API URL in the frontend as needed; default setup expects `http://localhost:8000` with the server running per the root [README.md](../README.md).
 
-### Additional Features
+### Additional features
 - [ ] Edit existing visits
 - [ ] Delete visits
 - [ ] Authentication & authorization
-- [ ] Backend API integration (REST + WebSocket)
+- [ ] Hardening / realtime (e.g. WebSocket) for live updates beyond current polling
 - [ ] Export patient reports (PDF)
 - [ ] Visit comparison feature
 - [ ] Analytics dashboard
