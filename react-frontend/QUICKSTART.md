@@ -54,7 +54,7 @@ This is the **main feature** of the project!
 9. Click **"Submit Questionnaire"**
 10. **Provider:** Watch responses auto-populate in your form! ✨
 
-See [QUESTIONNAIRE_WORKFLOW.md](./QUESTIONNAIRE_WORKFLOW.md) for complete details.
+See [README.md](./README.md) (Testing the Questionnaire Workflow) and the root [README.md](../README.md) for API setup.
 
 ## 📁 Project Structure
 

@@ -619,8 +619,8 @@ async def home_page(request: Request):
             <div class="endpoint"><strong>POST /analyze-image</strong> — Describe a patient-submitted photo</div>
 
             <p style="margin-top: 30px;">
-                <strong>Documentation:</strong> See README_API.md for full details<br>
-                <strong>React Frontend:</strong> http://localhost:5173 (when running)
+                <strong>Documentation:</strong> See docs/API.md for full details (eval/README.md for evaluation)<br>
+                <strong>React Frontend:</strong> http://localhost:3000 (when running; see react-frontend/vite.config.js)
             </p>
         </div>
     </body>
