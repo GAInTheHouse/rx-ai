@@ -30,8 +30,3 @@ The system currently supports two questionnaire generation modes:
   - Tends to be **more direct and condition-focused**, producing fewer “generic intake” questions.
 - **Single-pass risk**:
   - Higher risk of **implicit assumptions** when structured context is missing. For example, single-pass can mention specific medications even when `medications: []` was provided (plausible inference from conditions, but still an assumption).
-
-### Recommendation (current default)
-
-Keep **CrewAI** as the default for now (frontend uses `/generate-questionnaire`) until we add stricter grounding rules / JSON validation for the single-pass path. Use the single-pass endpoint when you need lower latency and can tolerate more assumption risk.
-
